@@ -45,12 +45,18 @@
 
             <div class="info-section">
                 <h3>📋 Regras de Penalidade</h3>
-                <ul>
-                    <li><strong>Horário Limite:</strong> 19:50:00 (sem penalidade)</li>
-                    <li><strong>Horário de Corte:</strong> 22:30:00 (penalidade máxima)</li>
-                    <li><strong>Penalidade Máxima:</strong> 40% da nota original</li>
-                    <li><strong>Cálculo:</strong> Penalidade linear distribuída em 160 minutos</li>
+                <ul id="regrasPenalidade">
+                    <li><strong>Horário Limite:</strong> <span id="horarioLimite">19:50:00</span> (sem penalidade)</li>
+                    <li><strong>Horário de Corte:</strong> <span id="horarioCorte">22:30:00</span> (penalidade máxima)</li>
+                    <li><strong>Penalidade Máxima:</strong> <span id="penalidadeMaxima">40%</span> da nota original</li>
+                    <li><strong>Cálculo:</strong> Penalidade linear distribuída em <span id="janelaMinutos">160</span> minutos</li>
                 </ul>
+                <div class="config-link">
+                    <a href="/configuracoes" class="config-btn">
+                        <span class="btn-icon">⚙️</span>
+                        Configurar Parâmetros
+                    </a>
+                </div>
             </div>
         </main>
     </div>

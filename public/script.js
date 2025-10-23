@@ -6,6 +6,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const error = document.getElementById('error');
     const errorMessage = document.getElementById('errorMessage');
 
+    // Carregar configurações atuais
+    carregarConfiguracaoAtual();
+
+    // Atualizar configurações quando a página voltar ao foco
+    window.addEventListener('focus', carregarConfiguracaoAtual);
+
     // Habilitar/desabilitar botão baseado na seleção de arquivo
     fileInput.addEventListener('change', function() {
         if (this.files.length > 0) {
@@ -134,5 +140,26 @@ document.addEventListener('DOMContentLoaded', function() {
             fileInput.files = files;
             fileInput.dispatchEvent(new Event('change'));
         }
+    }
+
+    // Função para carregar configuração atual
+    function carregarConfiguracaoAtual() {
+        fetch('/api/configuracao')
+            .then(response => response.json())
+            .then(data => {
+                atualizarRegrasPenalidade(data);
+            })
+            .catch(error => {
+                console.error('Erro ao carregar configuração:', error);
+                // Manter valores padrão se houver erro
+            });
+    }
+
+    // Função para atualizar as regras de penalidade na interface
+    function atualizarRegrasPenalidade(config) {
+        document.getElementById('horarioLimite').textContent = config.horarioInicio + ':00';
+        document.getElementById('horarioCorte').textContent = config.horarioLimite + ':00';
+        document.getElementById('penalidadeMaxima').textContent = config.percentualMaximo + '%';
+        document.getElementById('janelaMinutos').textContent = config.janelaMinutos;
     }
 });

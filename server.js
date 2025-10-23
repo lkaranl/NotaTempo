@@ -7,6 +7,14 @@ const path = require('path');
 const app = express();
 const PORT = 3001;
 
+// Parâmetros de configuração (valores padrão)
+let configuracao = {
+  horarioInicio: '19:50',        // Horário que começa a penalidade
+  horarioLimite: '22:30',        // Horário limite final
+  percentualMaximo: 40,          // Percentual máximo de desconto
+  janelaMinutos: 160             // Janela de tempo em minutos (calculada automaticamente)
+};
+
 // Configurar multer para upload de arquivos
 const upload = multer({ 
   dest: 'uploads/',
@@ -23,18 +31,33 @@ const upload = multer({
 app.use(express.static('public'));
 app.use(express.json());
 
+// Função para calcular a janela de tempo em minutos
+function calcularJanelaMinutos(horarioInicio, horarioLimite) {
+  const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
+  const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
+  
+  const inicioMinutos = horaInicio * 60 + minutoInicio;
+  const limiteMinutos = horaLimite * 60 + minutoLimite;
+  
+  return limiteMinutos - inicioMinutos;
+}
+
 // Função para calcular a nota final com penalidades e informações detalhadas
 function calcularNotaFinal(nota, dataHora) {
   const notaOriginal = parseFloat(nota);
   const dataEntrega = new Date(dataHora);
   
-  // Horário limite sem penalidade: 19:50:00
-  const horarioLimite = new Date(dataEntrega);
-  horarioLimite.setHours(19, 50, 0, 0);
+  // Usar configurações atuais
+  const [horaInicio, minutoInicio] = configuracao.horarioInicio.split(':').map(Number);
+  const [horaLimite, minutoLimite] = configuracao.horarioLimite.split(':').map(Number);
   
-  // Horário de corte com penalidade máxima: 22:30:00
+  // Horário limite sem penalidade
+  const horarioLimite = new Date(dataEntrega);
+  horarioLimite.setHours(horaInicio, minutoInicio, 0, 0);
+  
+  // Horário de corte com penalidade máxima
   const horarioCorte = new Date(dataEntrega);
-  horarioCorte.setHours(22, 30, 0, 0);
+  horarioCorte.setHours(horaLimite, minutoLimite, 0, 0);
   
   // Se entregou antes ou no horário limite, sem penalidade
   if (dataEntrega <= horarioLimite) {
@@ -51,11 +74,11 @@ function calcularNotaFinal(nota, dataHora) {
   // Calcular minutos de atraso
   const minutosAtraso = Math.floor((dataEntrega - horarioLimite) / (1000 * 60));
   
-  // Limitar atraso máximo a 160 minutos (até 22:30)
-  const minutosAtrasoLimitados = Math.min(minutosAtraso, 160);
+  // Limitar atraso máximo à janela configurada
+  const minutosAtrasoLimitados = Math.min(minutosAtraso, configuracao.janelaMinutos);
   
   // Calcular percentual de penalidade
-  const percentualPenalidade = minutosAtrasoLimitados * (0.40 / 160);
+  const percentualPenalidade = minutosAtrasoLimitados * (configuracao.percentualMaximo / 100 / configuracao.janelaMinutos);
   
   // Calcular valores
   const valorDesconto = notaOriginal * percentualPenalidade;
@@ -67,7 +90,7 @@ function calcularNotaFinal(nota, dataHora) {
     percentualDesconto: Math.round(percentualPenalidade * 10000) / 100, // Em %
     valorDesconto: Math.round(valorDesconto * 100) / 100,
     minutosAtraso: minutosAtrasoLimitados,
-    status: minutosAtraso > 160 ? 'Atraso máximo' : 'Com atraso'
+    status: minutosAtraso > configuracao.janelaMinutos ? 'Atraso máximo' : 'Com atraso'
   };
 }
 
@@ -131,6 +154,62 @@ app.post('/upload', upload.single('csvFile'), (req, res) => {
 // Rota para página de resultados
 app.get('/resultados', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'resultados.html'));
+});
+
+// Rota para página de configurações
+app.get('/configuracoes', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'configuracoes.html'));
+});
+
+// Rota para obter configurações atuais
+app.get('/api/configuracao', (req, res) => {
+  res.json(configuracao);
+});
+
+// Rota para atualizar configurações
+app.post('/api/configuracao', (req, res) => {
+  const { horarioInicio, horarioLimite, percentualMaximo } = req.body;
+  
+  // Validar dados
+  if (!horarioInicio || !horarioLimite || !percentualMaximo) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+  }
+  
+  // Validar formato de horário (HH:MM)
+  const horarioRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!horarioRegex.test(horarioInicio) || !horarioRegex.test(horarioLimite)) {
+    return res.status(400).json({ error: 'Formato de horário inválido. Use HH:MM' });
+  }
+  
+  // Validar percentual
+  const percentual = parseFloat(percentualMaximo);
+  if (isNaN(percentual) || percentual <= 0 || percentual >= 100) {
+    return res.status(400).json({ error: 'Percentual deve ser um número entre 0% e 100% (excluindo os extremos)' });
+  }
+  
+  // Validar se horário limite é maior que horário início
+  const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
+  const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
+  const inicioMinutos = horaInicio * 60 + minutoInicio;
+  const limiteMinutos = horaLimite * 60 + minutoLimite;
+  
+  if (limiteMinutos <= inicioMinutos) {
+    return res.status(400).json({ error: 'Horário limite deve ser maior que horário de início' });
+  }
+  
+  // Atualizar configuração
+  configuracao.horarioInicio = horarioInicio;
+  configuracao.horarioLimite = horarioLimite;
+  configuracao.percentualMaximo = percentual;
+  configuracao.janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
+  
+  console.log('Configuração atualizada:', configuracao);
+  
+  res.json({ 
+    success: true, 
+    message: 'Configuração atualizada com sucesso',
+    configuracao: configuracao 
+  });
 });
 
 app.listen(PORT, () => {

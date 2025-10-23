@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaTempo - Configurações</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚙️ Configurações</h1>
+            <p>Configure as regras de penalidade por atraso</p>
+        </header>
+
+        <main>
+            <div class="config-section">
+                <h2>📋 Parâmetros de Penalidade</h2>
+                <p>Configure os horários e percentuais para cálculo das penalidades</p>
+                
+                <form id="configForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="horarioInicio">Horário de Início da Penalidade</label>
+                            <input type="time" id="horarioInicio" name="horarioInicio" required>
+                            <small>Horário a partir do qual começam as penalidades</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="horarioLimite">Horário Limite Final</label>
+                            <input type="time" id="horarioLimite" name="horarioLimite" required>
+                            <small>Horário limite para aplicação de penalidades</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="percentualMaximo">Percentual Máximo de Desconto</label>
+                            <div class="input-with-suffix">
+                                <input type="text" id="percentualMaximo" name="percentualMaximo" placeholder="40.0" required>
+                                <span class="input-suffix">%</span>
+                            </div>
+                            <small>Percentual máximo de desconto aplicado (entre 0.1% e 99.9%)</small>
+                        </div>
+                    </div>
+
+                    <div class="config-preview">
+                        <h3>📊 Resumo da Configuração</h3>
+                        <div class="preview-cards">
+                            <div class="preview-card">
+                                <div class="preview-label">Janela de Tempo</div>
+                                <div class="preview-value" id="janelaTempo">-</div>
+                            </div>
+                            <div class="preview-card">
+                                <div class="preview-label">Taxa por Minuto</div>
+                                <div class="preview-value" id="taxaMinuto">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="carregarConfiguracao()" class="load-btn">
+                            <span class="btn-icon">🔄</span>
+                            Carregar Configuração Atual
+                        </button>
+                        <button type="submit" class="save-btn">
+                            <span class="btn-icon">💾</span>
+                            Salvar Configuração
+                        </button>
+                    </div>
+                </form>
+
+                <div id="message" class="message hidden"></div>
+            </div>
+
+            <div class="navigation">
+                <button onclick="window.location.href='/'" class="nav-btn">
+                    <span class="btn-icon">📤</span>
+                    Upload de Arquivos
+                </button>
+                <button onclick="window.location.href='/resultados'" class="nav-btn">
+                    <span class="btn-icon">📊</span>
+                    Ver Resultados
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Carregar configuração atual ao abrir a página
+        document.addEventListener('DOMContentLoaded', carregarConfiguracao);
+
+        // Atualizar preview em tempo real
+        document.getElementById('configForm').addEventListener('input', atualizarPreview);
+
+        // Máscara para o campo de percentual
+        const percentualInput = document.getElementById('percentualMaximo');
+        percentualInput.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            // Remove caracteres não numéricos exceto ponto
+            value = value.replace(/[^0-9.]/g, '');
+            
+            // Garante apenas um ponto decimal
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            // Limita a 1 casa decimal
+            if (parts[1] && parts[1].length > 1) {
+                value = parts[0] + '.' + parts[1].substring(0, 1);
+            }
+            
+            // Limita o valor máximo
+            const numValue = parseFloat(value);
+            if (numValue > 99.9) {
+                value = '99.9';
+            }
+            
+            e.target.value = value;
+        });
+
+        // Validação em tempo real
+        percentualInput.addEventListener('blur', function(e) {
+            const value = parseFloat(e.target.value);
+            if (value <= 0 || value >= 100) {
+                e.target.style.borderColor = '#e53e3e';
+                e.target.style.backgroundColor = '#fed7d7';
+            } else {
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.backgroundColor = '#f7fafc';
+            }
+        });
+
+        percentualInput.addEventListener('focus', function(e) {
+            e.target.style.borderColor = '#667eea';
+            e.target.style.backgroundColor = 'white';
+        });
+
+        function carregarConfiguracao() {
+            fetch('/api/configuracao')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('horarioInicio').value = data.horarioInicio;
+                    document.getElementById('horarioLimite').value = data.horarioLimite;
+                    document.getElementById('percentualMaximo').value = data.percentualMaximo;
+                    atualizarPreview();
+                    mostrarMensagem('Configuração carregada com sucesso!', 'success');
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar configuração:', error);
+                    mostrarMensagem('Erro ao carregar configuração', 'error');
+                });
+        }
+
+        function atualizarPreview() {
+            const horarioInicio = document.getElementById('horarioInicio').value;
+            const horarioLimite = document.getElementById('horarioLimite').value;
+            const percentualMaximo = parseFloat(document.getElementById('percentualMaximo').value);
+
+            if (horarioInicio && horarioLimite && !isNaN(percentualMaximo)) {
+                const janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
+                const taxaMinuto = janelaMinutos > 0 ? (percentualMaximo / janelaMinutos).toFixed(3) : 0;
+
+                document.getElementById('janelaTempo').textContent = `${janelaMinutos} minutos`;
+                document.getElementById('taxaMinuto').textContent = `${taxaMinuto}% por minuto`;
+            } else {
+                document.getElementById('janelaTempo').textContent = '-';
+                document.getElementById('taxaMinuto').textContent = '-';
+            }
+        }
+
+        function calcularJanelaMinutos(horarioInicio, horarioLimite) {
+            const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
+            const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
+            
+            const inicioMinutos = horaInicio * 60 + minutoInicio;
+            const limiteMinutos = horaLimite * 60 + minutoLimite;
+            
+            return limiteMinutos - inicioMinutos;
+        }
+
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const percentual = parseFloat(formData.get('percentualMaximo'));
+            
+            // Validação do percentual no frontend
+            if (percentual <= 0 || percentual >= 100) {
+                mostrarMensagem('Percentual deve ser um número entre 0.1% e 99.9%', 'error');
+                return;
+            }
+            
+            const config = {
+                horarioInicio: formData.get('horarioInicio'),
+                horarioLimite: formData.get('horarioLimite'),
+                percentualMaximo: percentual
+            };
+
+            fetch('/api/configuracao', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensagem(data.message, 'success');
+                    atualizarPreview();
+                } else {
+                    mostrarMensagem(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao salvar configuração:', error);
+                mostrarMensagem('Erro ao salvar configuração', 'error');
+            });
+        });
+
+        function mostrarMensagem(texto, tipo) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = texto;
+            messageDiv.className = `message ${tipo}`;
+            messageDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                messageDiv.classList.add('hidden');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
