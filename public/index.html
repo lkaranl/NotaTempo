@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaTempo - Upload de Notas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 NotaTempo</h1>
+            <p>Sistema de Processamento de Notas com Penalidades por Atraso</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <h2>Upload do Arquivo CSV</h2>
+                <p>Faça o upload do arquivo <code>alunos.csv</code> com as colunas: nome, nota, datahora</p>
+                
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="file-input-container">
+                        <input type="file" id="csvFile" name="csvFile" accept=".csv" required>
+                        <label for="csvFile" class="file-input-label">
+                            <span class="file-input-text">Escolher arquivo CSV</span>
+                            <span class="file-input-icon">📁</span>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="upload-btn" disabled>
+                        <span class="btn-text">Processar Notas</span>
+                        <span class="btn-icon">⚡</span>
+                    </button>
+                </form>
+
+                <div id="loading" class="loading hidden">
+                    <div class="spinner"></div>
+                    <p>Processando arquivo...</p>
+                </div>
+
+                <div id="error" class="error hidden">
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h3>📋 Regras de Penalidade</h3>
+                <ul>
+                    <li><strong>Horário Limite:</strong> 19:50:00 (sem penalidade)</li>
+                    <li><strong>Horário de Corte:</strong> 22:30:00 (penalidade máxima)</li>
+                    <li><strong>Penalidade Máxima:</strong> 40% da nota original</li>
+                    <li><strong>Cálculo:</strong> Penalidade linear distribuída em 160 minutos</li>
+                </ul>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

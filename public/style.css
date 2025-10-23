@@ -1,0 +1,632 @@
+/* Reset e configurações básicas */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+header h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+/* Seções principais */
+main {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.upload-section, .results-section {
+    margin-bottom: 30px;
+}
+
+.upload-section h2, .results-section h2 {
+    color: #4a5568;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+/* Formulário de upload */
+.file-input-container {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.file-input-container input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.file-input-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border: 3px dashed #cbd5e0;
+    border-radius: 15px;
+    background: #f7fafc;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 120px;
+}
+
+.file-input-label:hover {
+    border-color: #667eea;
+    background: #edf2f7;
+}
+
+.file-input-text {
+    font-size: 1.1rem;
+    color: #4a5568;
+    margin-right: 10px;
+}
+
+.file-input-icon {
+    font-size: 2rem;
+}
+
+/* Botões */
+.upload-btn, .back-btn, .report-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.upload-btn:hover, .back-btn:hover, .report-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.upload-btn:disabled, .report-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Botão de relatório específico */
+.report-btn {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+.report-btn:hover {
+    box-shadow: 0 10px 20px rgba(72, 187, 120, 0.3);
+}
+
+/* Container dos botões do header */
+.header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+}
+
+/* Loading */
+.loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mensagens de erro */
+.error {
+    background: #fed7d7;
+    color: #c53030;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+    border-left: 4px solid #e53e3e;
+}
+
+/* Seção de informações */
+.info-section {
+    background: #f7fafc;
+    padding: 25px;
+    border-radius: 15px;
+    border-left: 5px solid #667eea;
+}
+
+.info-section h3 {
+    color: #4a5568;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+.info-section ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.info-section li {
+    padding: 8px 0;
+    color: #718096;
+    position: relative;
+    padding-left: 25px;
+}
+
+.info-section li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* Tabela de resultados */
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.results-info {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.table-container {
+    overflow-x: auto;
+    border-radius: 20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    background: white;
+    border: 1px solid #e2e8f0;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+th, td {
+    padding: 20px 25px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    font-weight: 700;
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+th:first-child {
+    border-top-left-radius: 20px;
+}
+
+th:last-child {
+    border-top-right-radius: 20px;
+    text-align: center;
+}
+
+td {
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+
+td:last-child {
+    text-align: center;
+    font-weight: 600;
+}
+
+tbody tr {
+    transition: all 0.3s ease;
+}
+
+tbody tr:hover {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+tbody tr:nth-child(even):hover {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+}
+
+/* Classes para notas - Design melhorado */
+.nota-cell {
+    font-weight: 700;
+    text-align: center;
+    border-radius: 12px;
+    padding: 12px 20px !important;
+    font-size: 1.2rem;
+    min-width: 80px;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.nota-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.nota-excelente {
+    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.nota-boa {
+    background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.nota-regular {
+    background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.nota-ruim {
+    background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Indicador de performance */
+.nota-cell::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.8);
+}
+
+/* Estatísticas rápidas */
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #4a5568;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #718096;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Mensagem de dados não encontrados */
+.no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: #718096;
+}
+
+.no-data p {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+}
+
+/* Utilitários */
+.hidden {
+    display: none !important;
+}
+
+/* Melhorias adicionais */
+.results-section h2 {
+    color: #2d3748;
+    font-size: 2rem;
+    margin-bottom: 0;
+}
+
+.table-container {
+    margin-top: 20px;
+}
+
+/* Melhorar legibilidade dos nomes */
+tbody td:first-child {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+
+/* Informações do aluno */
+.student-name {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.student-name strong {
+    color: #2d3748;
+    font-size: 1.1rem;
+}
+
+.delivery-time {
+    font-size: 0.85rem;
+    color: #718096;
+    font-weight: 500;
+    background: #f7fafc;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border-left: 3px solid #cbd5e0;
+    display: inline-block;
+    width: fit-content;
+}
+
+/* Status badges */
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    width: fit-content;
+}
+
+.status-ontime {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.status-late {
+    background: #fef5e7;
+    color: #744210;
+}
+
+.status-max-delay {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+/* Nota original */
+.nota-original {
+    text-align: center;
+    font-weight: 600;
+    color: #4a5568;
+    background: #f7fafc;
+    border-radius: 8px;
+    padding: 10px 15px !important;
+}
+
+/* Detalhes da penalidade */
+.penalty-details {
+    text-align: center;
+    min-width: 150px;
+}
+
+.penalty-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: #fef5e7;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #ed8936;
+}
+
+.penalty-percentage {
+    font-weight: 700;
+    color: #dd6b20;
+    font-size: 1.1rem;
+}
+
+.penalty-value {
+    font-weight: 600;
+    color: #744210;
+    font-size: 0.9rem;
+}
+
+.penalty-time {
+    font-weight: 500;
+    color: #9c4221;
+    font-size: 0.8rem;
+}
+
+.no-penalty {
+    background: #c6f6d5;
+    color: #22543d;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-left: 4px solid #38a169;
+}
+
+/* Animações suaves */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-card {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.stat-card:nth-child(1) { animation-delay: 0.1s; }
+.stat-card:nth-child(2) { animation-delay: 0.2s; }
+.stat-card:nth-child(3) { animation-delay: 0.3s; }
+.stat-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Melhorar hover da tabela */
+tbody tr {
+    cursor: pointer;
+}
+
+tbody tr:hover td:first-child {
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    main {
+        padding: 20px;
+    }
+    
+    .results-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .results-info {
+        justify-content: space-between;
+    }
+    
+    .header-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .report-btn, .back-btn {
+        padding: 12px 20px;
+        font-size: 1rem;
+    }
+    
+    .results-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    th, td {
+        padding: 15px 20px;
+    }
+    
+    .nota-cell {
+        font-size: 1.1rem;
+        padding: 10px 15px !important;
+    }
+    
+    .penalty-details {
+        min-width: 120px;
+    }
+    
+    .penalty-info {
+        padding: 8px;
+    }
+    
+    .penalty-percentage {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .results-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    th, td {
+        padding: 12px 15px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+    }
+}

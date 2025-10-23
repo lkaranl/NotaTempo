@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaTempo - Resultados</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Resultados das Notas</h1>
+            <p>Notas finais calculadas com base nas regras de penalidade</p>
+        </header>
+
+        <main>
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>📊 Resultados das Notas</h2>
+                    <div class="results-info">
+                        <span id="totalAlunos">0 alunos processados</span>
+                        <div class="header-buttons">
+                            <button onclick="gerarRelatorio()" class="report-btn" id="reportBtn" disabled>
+                                <span class="btn-icon">📄</span>
+                                Gerar Relatório
+                            </button>
+                            <button onclick="window.location.href='/'" class="back-btn">
+                                <span class="btn-icon">←</span>
+                                Novo Upload
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-stats" id="statsContainer">
+                    <div class="stat-card">
+                        <div class="stat-number" id="mediaGeral">0.0</div>
+                        <div class="stat-label">Média Geral</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="aprovados">0</div>
+                        <div class="stat-label">Aprovados (≥7)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="reprovados">0</div>
+                        <div class="stat-label">Reprovados (<7)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="maiorNota">0.0</div>
+                        <div class="stat-label">Maior Nota</div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>Nome do Aluno</th>
+                                <th>Nota Original</th>
+                                <th>Nota Final</th>
+                                <th>Detalhes da Penalidade</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                            <!-- Dados serão inseridos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="noData" class="no-data hidden">
+                    <p>Nenhum dado encontrado. Faça o upload de um arquivo CSV válido.</p>
+                    <button onclick="window.location.href='/'" class="back-btn">
+                        <span class="btn-icon">←</span>
+                        Voltar ao Upload
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Função para carregar e exibir os resultados
+        function carregarResultados() {
+            // Verificar se há dados no localStorage
+            const dados = localStorage.getItem('resultadosNotas');
+            
+            if (!dados) {
+                document.getElementById('noData').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const resultados = JSON.parse(dados);
+                exibirResultados(resultados);
+            } catch (error) {
+                console.error('Erro ao carregar resultados:', error);
+                document.getElementById('noData').classList.remove('hidden');
+            }
+        }
+
+        function exibirResultados(resultados) {
+            const tbody = document.getElementById('resultsBody');
+            const totalAlunos = document.getElementById('totalAlunos');
+            
+            // Limpar tabela
+            tbody.innerHTML = '';
+            
+            // Atualizar contador
+            totalAlunos.textContent = `${resultados.length} alunos processados`;
+            
+            // Calcular estatísticas
+            const notas = resultados.map(aluno => aluno.notaFinal);
+            const mediaGeral = notas.reduce((sum, nota) => sum + nota, 0) / notas.length;
+            const aprovados = notas.filter(nota => nota >= 7).length;
+            const reprovados = notas.length - aprovados;
+            const maiorNota = Math.max(...notas);
+            
+            // Atualizar estatísticas
+            document.getElementById('mediaGeral').textContent = mediaGeral.toFixed(1);
+            document.getElementById('aprovados').textContent = aprovados;
+            document.getElementById('reprovados').textContent = reprovados;
+            document.getElementById('maiorNota').textContent = maiorNota.toFixed(1);
+            
+            // Habilitar botão de relatório
+            document.getElementById('reportBtn').disabled = false;
+            
+            // Ordenar por tempo de entrega (primeiro a entregar no topo)
+            resultados.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+            
+            // Adicionar linhas da tabela
+            resultados.forEach((aluno) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <div class="student-name">
+                            <strong>${aluno.nome}</strong>
+                            <div class="status-badge ${getStatusClass(aluno.status)}">${aluno.status}</div>
+                            <div class="delivery-time">${formatarDataHora(aluno.dataHora)}</div>
+                        </div>
+                    </td>
+                    <td class="nota-original">${aluno.notaOriginal}</td>
+                    <td class="nota-cell ${getNotaClass(aluno.notaFinal)}">${aluno.notaFinal}</td>
+                    <td class="penalty-details">
+                        ${aluno.percentualDesconto > 0 ? `
+                            <div class="penalty-info">
+                                <div class="penalty-percentage">-${aluno.percentualDesconto}%</div>
+                                <div class="penalty-value">-${aluno.valorDesconto} pontos</div>
+                                <div class="penalty-time">${aluno.minutosAtraso} min atraso</div>
+                            </div>
+                        ` : `
+                            <div class="no-penalty">Sem penalidade</div>
+                        `}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function getNotaClass(nota) {
+            if (nota >= 9) return 'nota-excelente';
+            if (nota >= 7) return 'nota-boa';
+            if (nota >= 5) return 'nota-regular';
+            return 'nota-ruim';
+        }
+
+        function getStatusClass(status) {
+            switch(status) {
+                case 'No prazo': return 'status-ontime';
+                case 'Com atraso': return 'status-late';
+                case 'Atraso máximo': return 'status-max-delay';
+                default: return 'status-unknown';
+            }
+        }
+
+        function formatarDataHora(dataHora) {
+            const data = new Date(dataHora);
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            const hora = String(data.getHours()).padStart(2, '0');
+            const minuto = String(data.getMinutes()).padStart(2, '0');
+            
+            return `${dia}/${mes}/${ano} às ${hora}:${minuto}`;
+        }
+
+        function gerarRelatorio() {
+            const dados = localStorage.getItem('resultadosNotas');
+            if (!dados) {
+                alert('Nenhum dado encontrado para gerar relatório.');
+                return;
+            }
+
+            try {
+                const resultados = JSON.parse(dados);
+                let relatorio = 'RELATÓRIO DE NOTAS - SISTEMA NOTATEMPO\n';
+                relatorio += '='.repeat(50) + '\n\n';
+                relatorio += `Data de geração: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}\n`;
+                relatorio += `Total de alunos: ${resultados.length}\n\n`;
+                relatorio += '='.repeat(50) + '\n\n';
+
+                resultados.forEach((aluno, index) => {
+                    relatorio += `${index + 1}. `;
+                    
+                    if (aluno.percentualDesconto === 0) {
+                        relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como não houve atraso então não houve penalidade.\n\n`;
+                    } else {
+                        relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como houve atraso então vai haver penalidade. Seu atraso foi de ${aluno.minutosAtraso} minutos, o que corresponde a ${aluno.percentualDesconto}% de desconto, então sua nota final é de ${aluno.notaFinal}.\n\n`;
+                    }
+                });
+
+                relatorio += '='.repeat(50) + '\n';
+                relatorio += 'Relatório gerado automaticamente pelo Sistema NotaTempo\n';
+                relatorio += 'Para mais informações, acesse: http://localhost:3001\n';
+
+                // Criar e baixar o arquivo
+                const blob = new Blob([relatorio], { type: 'text/plain;charset=utf-8' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `relatorio_notas_${new Date().toISOString().split('T')[0]}.txt`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error('Erro ao gerar relatório:', error);
+                alert('Erro ao gerar relatório. Tente novamente.');
+            }
+        }
+
+        // Carregar resultados quando a página carregar
+        document.addEventListener('DOMContentLoaded', carregarResultados);
+    </script>
+</body>
+</html>
