@@ -21,12 +21,8 @@
       "destination": "/public/estatisticas.html"
     },
     {
-      "source": "/(.*\\.(css|js|ico|png|jpg|jpeg|gif|svg))",
-      "destination": "/public/$1"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/public/$1.html"
+      "destination": "/public/$1"
     }
   ]
 }
