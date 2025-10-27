@@ -496,6 +496,21 @@ tbody td:first-child {
     color: #742a2a;
 }
 
+.status-not-submitted {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+.status-min-grade {
+    background: #fef5e7;
+    color: #744210;
+}
+
+.status-unknown {
+    background: #cbd5e0;
+    color: #2d3748;
+}
+
 /* Nota original */
 .nota-original {
     text-align: center;
@@ -872,5 +887,210 @@ tbody tr:hover td:first-child {
     
     .stat-number {
         font-size: 1.5rem;
+    }
+}
+
+/* Estilos específicos para a página de estatísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stats-section {
+    background: #f7fafc;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    border-left: 5px solid #667eea;
+}
+
+.stats-section h3 {
+    color: #4a5568;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stats-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stats-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .stats-grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.stat-card-large {
+    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card-large:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.stat-card-large.success {
+    background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+    border-color: #48bb78;
+}
+
+.stat-card-large.danger {
+    background: linear-gradient(135deg, #fed7d7 0%, #fc8181 100%);
+    border-color: #f56565;
+}
+
+.stat-card-large.warning {
+    background: linear-gradient(135deg, #feebc8 0%, #f6ad55 100%);
+    border-color: #ed8936;
+}
+
+.stat-icon {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.stat-card-large .stat-number {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.stat-card-large .stat-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #4a5568;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-percentage {
+    margin-top: 10px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #2d3748;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 5px 15px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.stat-label-small {
+    color: #718096;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-number-medium {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.stat-subtext {
+    font-size: 0.85rem;
+    color: #718096;
+    font-style: italic;
+}
+
+.stat-negative {
+    color: #e53e3e;
+}
+
+.stat-highlight {
+    background: linear-gradient(135deg, #bee3f8 0%, #90cdf4 100%);
+    border-color: #4299e1;
+}
+
+.stat-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 8px;
+}
+
+.badge-success {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.badge-warning {
+    background: #fef5e7;
+    color: #744210;
+}
+
+.badge-danger {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.badge-info {
+    background: #bee3f8;
+    color: #2c5282;
+}
+
+.chart-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.chart-container-large {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    height: 400px;
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-container,
+    .chart-container-large {
+        max-width: 100%;
+        padding: 10px;
+    }
+    
+    .chart-container-large {
+        height: 300px;
     }
 }

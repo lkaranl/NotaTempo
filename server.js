@@ -62,12 +62,36 @@ function calcularNotaFinal(nota, dataHora) {
   // Se entregou antes ou no horário limite, sem penalidade
   if (dataEntrega <= horarioLimite) {
     return {
-      notaFinal: notaOriginal,
+      notaFinal: Math.round(notaOriginal),
       notaOriginal: notaOriginal,
       percentualDesconto: 0,
       valorDesconto: 0,
       minutosAtraso: 0,
       status: 'No prazo'
+    };
+  }
+  
+  // Se a nota é 0 (não entregou a prova), não aplicar penalidade
+  if (notaOriginal <= 0.5) {
+    return {
+      notaFinal: Math.round(notaOriginal),
+      notaOriginal: notaOriginal,
+      percentualDesconto: 0,
+      valorDesconto: 0,
+      minutosAtraso: 0,
+      status: 'Não entregou'
+    };
+  }
+  
+  // Se a nota é 10 (nota mínima para não zerar), não aplicar penalidade
+  if (notaOriginal >= 9.5 && notaOriginal <= 10.5) {
+    return {
+      notaFinal: Math.round(notaOriginal),
+      notaOriginal: notaOriginal,
+      percentualDesconto: 0,
+      valorDesconto: 0,
+      minutosAtraso: 0,
+      status: 'Nota mínima'
     };
   }
   
@@ -85,7 +109,7 @@ function calcularNotaFinal(nota, dataHora) {
   const notaFinal = notaOriginal - valorDesconto;
   
   return {
-    notaFinal: Math.round(notaFinal * 100) / 100,
+    notaFinal: Math.round(notaFinal),
     notaOriginal: notaOriginal,
     percentualDesconto: Math.round(percentualPenalidade * 10000) / 100, // Em %
     valorDesconto: Math.round(valorDesconto * 100) / 100,
@@ -159,6 +183,11 @@ app.get('/resultados', (req, res) => {
 // Rota para página de configurações
 app.get('/configuracoes', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'configuracoes.html'));
+});
+
+// Rota para página de estatísticas
+app.get('/estatisticas', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'estatisticas.html'));
 });
 
 // Rota para obter configurações atuais

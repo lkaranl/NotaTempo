@@ -24,6 +24,10 @@
                                 <span class="btn-icon">📄</span>
                                 Gerar Relatório
                             </button>
+                            <button onclick="window.location.href='/estatisticas'" class="back-btn">
+                                <span class="btn-icon">📊</span>
+                                Estatísticas
+                            </button>
                             <button onclick="window.location.href='/'" class="back-btn">
                                 <span class="btn-icon">←</span>
                                 Novo Upload
@@ -39,11 +43,11 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="aprovados">0</div>
-                        <div class="stat-label">Aprovados (≥6)</div>
+                        <div class="stat-label">Aprovados (≥60)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="reprovados">0</div>
-                        <div class="stat-label">Reprovados (<6)</div>
+                        <div class="stat-label">Reprovados (<60)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="maiorNota">0.0</div>
@@ -157,9 +161,9 @@
         }
 
         function getNotaClass(nota) {
-            if (nota >= 9) return 'nota-excelente';
-            if (nota >= 7) return 'nota-boa';
-            if (nota >= 5) return 'nota-regular';
+            if (nota >= 90) return 'nota-excelente';
+            if (nota >= 60) return 'nota-boa';
+            if (nota >= 50) return 'nota-regular';
             return 'nota-ruim';
         }
 
@@ -168,6 +172,8 @@
                 case 'No prazo': return 'status-ontime';
                 case 'Com atraso': return 'status-late';
                 case 'Atraso máximo': return 'status-max-delay';
+                case 'Não entregou': return 'status-not-submitted';
+                case 'Nota mínima': return 'status-min-grade';
                 default: return 'status-unknown';
             }
         }
@@ -202,7 +208,13 @@
                     relatorio += `${index + 1}. `;
                     
                     if (aluno.percentualDesconto === 0) {
-                        relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como não houve atraso então não houve penalidade.\n\n`;
+                        if (aluno.status === 'Nota mínima') {
+                            relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como você tirou a nota mínima então não houve desconto.\n\n`;
+                        } else if (aluno.status === 'Não entregou') {
+                            relatorio += `${aluno.nome}, você não entregou a prova ou não compareceu.\n\n`;
+                        } else {
+                            relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como não houve atraso então não houve penalidade.\n\n`;
+                        }
                     } else {
                         relatorio += `${aluno.nome}, você tirou ${aluno.notaOriginal} na prova. Como houve atraso então vai haver penalidade. Seu atraso foi de ${aluno.minutosAtraso} minutos, o que corresponde a ${aluno.percentualDesconto}% de desconto, então sua nota final é de ${aluno.notaFinal}.\n\n`;
                     }

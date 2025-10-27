@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotaTempo - Estatísticas</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Estatísticas Detalhadas</h1>
+            <p>Análise completa dos resultados</p>
+        </header>
+
+        <main>
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>📈 Estatísticas Gerais</h2>
+                    <div class="header-buttons">
+                        <button onclick="window.location.href='/resultados'" class="back-btn">
+                            <span class="btn-icon">📄</span>
+                            Ver Resultados
+                        </button>
+                        <button onclick="window.location.href='/'" class="back-btn">
+                            <span class="btn-icon">←</span>
+                            Novo Upload
+                        </button>
+                    </div>
+                </div>
+
+                <div id="statisticsContainer">
+                    <!-- Estatísticas serão inseridas via JavaScript -->
+                </div>
+
+                <div id="noData" class="no-data hidden">
+                    <p>Nenhum dado encontrado. Faça o upload de um arquivo CSV válido.</p>
+                    <button onclick="window.location.href='/'" class="back-btn">
+                        <span class="btn-icon">←</span>
+                        Voltar ao Upload
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function carregarEstatisticas() {
+            const dados = localStorage.getItem('resultadosNotas');
+            
+            if (!dados) {
+                document.getElementById('noData').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const resultados = JSON.parse(dados);
+                calcularEstatisticas(resultados);
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+                document.getElementById('noData').classList.remove('hidden');
+            }
+        }
+
+        function calcularEstatisticas(resultados) {
+            const notas = resultados.map(aluno => aluno.notaFinal);
+            const notasOriginais = resultados.map(aluno => aluno.notaOriginal);
+            
+            // Estatísticas básicas
+            const totalAlunos = resultados.length;
+            const aprovados = notas.filter(nota => nota >= 60).length;
+            const reprovados = notas.filter(nota => nota < 60 && nota > 0).length;
+            const naoEntregaram = notas.filter(nota => nota === 0).length;
+            
+            const mediaGeral = totalAlunos > 0 ? notas.reduce((sum, nota) => sum + nota, 0) / totalAlunos : 0;
+            const mediaOriginais = notasOriginais.reduce((sum, nota) => sum + nota, 0) / notasOriginais.length;
+            const maiorNota = Math.max(...notas);
+            const menorNota = Math.min(...notas.filter(nota => nota > 0));
+            
+            // Média apenas dos que entregaram (nota > 0)
+            const notasEntregaram = notas.filter(nota => nota > 0);
+            const mediaDosQueEntregaram = notasEntregaram.length > 0 
+                ? notasEntregaram.reduce((sum, nota) => sum + nota, 0) / notasEntregaram.length 
+                : 0;
+            
+            // Estatísticas sobre penalidades
+            const comPenalidade = resultados.filter(aluno => aluno.percentualDesconto > 0).length;
+            const semPenalidade = resultados.filter(aluno => aluno.percentualDesconto === 0 && aluno.status === 'No prazo').length;
+            const notaMinima = resultados.filter(aluno => aluno.status === 'Nota mínima').length;
+            
+            // Estatísticas sobre atrasos
+            const comAtraso = resultados.filter(aluno => aluno.minutosAtraso > 0).length;
+            const totalMinutosAtraso = resultados.reduce((sum, aluno) => sum + aluno.minutosAtraso, 0);
+            const mediaMinutosAtraso = comAtraso > 0 ? totalMinutosAtraso / comAtraso : 0;
+            
+            // Desconto médio
+            const alunosComDesconto = resultados.filter(aluno => aluno.percentualDesconto > 0);
+            const mediaDesconto = alunosComDesconto.length > 0 
+                ? alunosComDesconto.reduce((sum, aluno) => sum + aluno.percentualDesconto, 0) / alunosComDesconto.length 
+                : 0;
+            
+            // Distribuição de notas por faixa
+            const distribuicaoNotas = {
+                '0-10': notas.filter(n => n > 0 && n <= 10).length,
+                '11-20': notas.filter(n => n > 10 && n <= 20).length,
+                '21-30': notas.filter(n => n > 20 && n <= 30).length,
+                '31-40': notas.filter(n => n > 30 && n <= 40).length,
+                '41-50': notas.filter(n => n > 40 && n <= 50).length,
+                '51-60': notas.filter(n => n > 50 && n < 60).length,
+                '60-70': notas.filter(n => n >= 60 && n < 70).length,
+                '70-80': notas.filter(n => n >= 70 && n < 80).length,
+                '80-90': notas.filter(n => n >= 80 && n < 90).length,
+                '90-100': notas.filter(n => n >= 90 && n <= 100).length
+            };
+            
+            exibirEstatisticas({
+                totalAlunos,
+                aprovados,
+                reprovados,
+                naoEntregaram,
+                mediaGeral,
+                mediaOriginais,
+                mediaDosQueEntregaram,
+                maiorNota,
+                menorNota,
+                comPenalidade,
+                semPenalidade,
+                notaMinima,
+                comAtraso,
+                mediaMinutosAtraso,
+                mediaDesconto,
+                distribuicaoNotas,
+                resultados,
+                totalEntregaram: notasEntregaram.length
+            });
+        }
+
+        function exibirEstatisticas(stats) {
+            const container = document.getElementById('statisticsContainer');
+            
+            container.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card-large">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-number">${stats.totalAlunos}</div>
+                        <div class="stat-label">Total de Alunos</div>
+                    </div>
+                    
+                    <div class="stat-card-large success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-number">${stats.aprovados}</div>
+                        <div class="stat-label">Aprovados (≥60)</div>
+                        <div class="stat-percentage">${((stats.aprovados / stats.totalAlunos) * 100).toFixed(1)}%</div>
+                    </div>
+                    
+                    <div class="stat-card-large danger">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-number">${stats.reprovados}</div>
+                        <div class="stat-label">Reprovados (&lt;60)</div>
+                        <div class="stat-percentage">${((stats.reprovados / stats.totalAlunos) * 100).toFixed(1)}%</div>
+                    </div>
+                    
+                    <div class="stat-card-large warning">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-number">${stats.naoEntregaram}</div>
+                        <div class="stat-label">Não Entregaram</div>
+                        <div class="stat-percentage">${((stats.naoEntregaram / stats.totalAlunos) * 100).toFixed(1)}%</div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📊 Distribuição de Resultados</h3>
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📈 Distribuição de Notas por Faixa</h3>
+                    <div class="chart-container-large">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📊 Notas</h3>
+                    <div class="stats-grid-2">
+                        <div class="stat-card">
+                            <div class="stat-label-small">Média Geral</div>
+                            <div class="stat-number-medium">${stats.mediaGeral.toFixed(1)}</div>
+                            <div class="stat-subtext">Incluindo todos os alunos</div>
+                        </div>
+                        
+                        <div class="stat-card stat-highlight">
+                            <div class="stat-label-small">Média dos Que Entregaram</div>
+                            <div class="stat-number-medium">${stats.mediaDosQueEntregaram.toFixed(1)}</div>
+                            <div class="stat-subtext">${stats.totalEntregaram} alunos entregaram</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Média Original</div>
+                            <div class="stat-number-medium">${stats.mediaOriginais.toFixed(1)}</div>
+                            <div class="stat-subtext">Antes das penalidades</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Maior Nota</div>
+                            <div class="stat-number-medium">${stats.maiorNota}</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Menor Nota (&gt;0)</div>
+                            <div class="stat-number-medium">${stats.menorNota}</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Diferença de Médias</div>
+                            <div class="stat-number-medium ${(stats.mediaOriginais - stats.mediaGeral).toFixed(1) > 0 ? 'stat-negative' : ''}">-${(stats.mediaOriginais - stats.mediaGeral).toFixed(1)}</div>
+                            <div class="stat-subtext">Redução por penalidades</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>⏱️ Entregas e Penalidades</h3>
+                    <div class="stats-grid-2">
+                        <div class="stat-card">
+                            <div class="stat-label-small">No Prazo</div>
+                            <div class="stat-number-medium">${stats.semPenalidade}</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Com Atraso</div>
+                            <div class="stat-number-medium">${stats.comAtraso}</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Com Penalidade</div>
+                            <div class="stat-number-medium">${stats.comPenalidade}</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Nota Mínima</div>
+                            <div class="stat-number-medium">${stats.notaMinima}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📉 Impacto das Penalidades</h3>
+                    <div class="chart-container-large">
+                        <canvas id="penaltyChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📉 Estatísticas de Penalidades</h3>
+                    <div class="stats-grid-2">
+                        <div class="stat-card">
+                            <div class="stat-label-small">Média de Desconto</div>
+                            <div class="stat-number-medium">${stats.mediaDesconto.toFixed(2)}%</div>
+                            <div class="stat-subtext">Aplicado em ${stats.comPenalidade} alunos</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-label-small">Média de Atraso</div>
+                            <div class="stat-number-medium">${stats.mediaMinutosAtraso.toFixed(0)} min</div>
+                            <div class="stat-subtext">Entre os que se atrasaram</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Criar gráficos após o HTML ser inserido
+            setTimeout(() => {
+                criarGraficos(stats);
+            }, 100);
+        }
+
+        function criarGraficos(stats) {
+            // Gráfico de Pizza - Distribuição de Resultados
+            const ctxPie = document.getElementById('pieChart');
+            if (ctxPie) {
+                new Chart(ctxPie, {
+                    type: 'pie',
+                    data: {
+                        labels: ['Aprovados (≥60)', 'Reprovados (<60)', 'Não Entregaram'],
+                        datasets: [{
+                            data: [stats.aprovados, stats.reprovados, stats.naoEntregaram],
+                            backgroundColor: [
+                                '#48bb78',
+                                '#f56565',
+                                '#ed8936'
+                            ],
+                            borderWidth: 3,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label;
+                                        const value = context.parsed;
+                                        const total = stats.totalAlunos;
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: ${value} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Gráfico de Barras - Distribuição de Notas
+            const ctxBar = document.getElementById('barChart');
+            if (ctxBar) {
+                new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(stats.distribuicaoNotas),
+                        datasets: [{
+                            label: 'Quantidade de Alunos',
+                            data: Object.values(stats.distribuicaoNotas),
+                            backgroundColor: [
+                                '#fed7d7',
+                                '#feebc8',
+                                '#fef5e7',
+                                '#fffaf0',
+                                '#f0fff4',
+                                '#e6fffa',
+                                '#bee3f8',
+                                '#9ae6b4',
+                                '#90cdf4',
+                                '#48bb78'
+                            ],
+                            borderColor: '#2d3748',
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.parsed.y} alunos`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Gráfico de Linha - Impacto das Penalidades
+            const alunosComPenalidade = stats.resultados.filter(a => a.percentualDesconto > 0);
+            if (alunosComPenalidade.length > 0) {
+                const impactos = alunosComPenalidade.map(a => ({
+                    nome: a.nome,
+                    original: a.notaOriginal,
+                    final: a.notaFinal,
+                    desconto: a.percentualDesconto
+                })).sort((a, b) => b.desconto - a.desconto).slice(0, 10);
+
+                const ctxLine = document.getElementById('penaltyChart');
+                if (ctxLine) {
+                    new Chart(ctxLine, {
+                        type: 'line',
+                        data: {
+                            labels: impactos.map((_, i) => `${i + 1}º`),
+                            datasets: [
+                                {
+                                    label: 'Nota Original',
+                                    data: impactos.map(a => a.original),
+                                    borderColor: '#4299e1',
+                                    backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                                    borderWidth: 3,
+                                    tension: 0.4,
+                                    fill: false
+                                },
+                                {
+                                    label: 'Nota Final',
+                                    data: impactos.map(a => a.final),
+                                    borderColor: '#f56565',
+                                    backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                                    borderWidth: 3,
+                                    tension: 0.4,
+                                    fill: false
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Top 10 Maiores Impactos de Penalidade',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarEstatisticas);
+    </script>
+</body>
+</html>
