@@ -39,11 +39,11 @@
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="aprovados">0</div>
-                        <div class="stat-label">Aprovados (≥7)</div>
+                        <div class="stat-label">Aprovados (≥6)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="reprovados">0</div>
-                        <div class="stat-label">Reprovados (<7)</div>
+                        <div class="stat-label">Reprovados (<6)</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-number" id="maiorNota">0.0</div>
@@ -111,7 +111,7 @@
             // Calcular estatísticas
             const notas = resultados.map(aluno => aluno.notaFinal);
             const mediaGeral = notas.reduce((sum, nota) => sum + nota, 0) / notas.length;
-            const aprovados = notas.filter(nota => nota >= 7).length;
+            const aprovados = notas.filter(nota => nota >= 60).length;
             const reprovados = notas.length - aprovados;
             const maiorNota = Math.max(...notas);
             
