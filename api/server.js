@@ -6,72 +6,27 @@ const path = require('path');
 
 const app = express();
 
-// Configuração
-const CONFIG_FILE = path.join(__dirname, '../config.json');
-const LOGS_FILE = path.join(__dirname, '../logs.txt');
+// Configuração em memória (não persiste entre requests)
+let configuracao = {
+  horarioInicio: '19:50',
+  horarioLimite: '22:30',
+  percentualMaximo: 40,
+  janelaMinutos: 160
+};
 
-// Criar pastas se não existirem
-if (!fs.existsSync(path.join(__dirname, '../uploads'))) {
-  fs.mkdirSync(path.join(__dirname, '../uploads'), { recursive: true });
+function calcularJanelaMinutos(horarioInicio, horarioLimite) {
+  const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
+  const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
+  const inicioMinutos = horaInicio * 60 + minutoInicio;
+  const limiteMinutos = horaLimite * 60 + minutoLimite;
+  return limiteMinutos - inicioMinutos;
 }
 
-// Carregar configuração de arquivo JSON
-function carregarConfiguracao() {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const data = fs.readFileSync(CONFIG_FILE, 'utf8');
-      const config = JSON.parse(data);
-      config.janelaMinutos = calcularJanelaMinutos(config.horarioInicio, config.horarioLimite);
-      return config;
-    }
-  } catch (error) {
-    log('Erro ao carregar configuração: ' + error.message, 'error');
-  }
-  
-  // Valores padrão
-  return {
-    horarioInicio: '19:50',
-    horarioLimite: '22:30',
-    percentualMaximo: 40,
-    janelaMinutos: 160
-  };
-}
-
-// Salvar configuração em arquivo JSON
-function salvarConfiguracao(config) {
-  try {
-    const { horarioInicio, horarioLimite, percentualMaximo } = config;
-    const configParaSalvar = { horarioInicio, horarioLimite, percentualMaximo };
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(configParaSalvar, null, 2));
-  } catch (error) {
-    log('Erro ao salvar configuração: ' + error.message, 'error');
-  }
-}
-
-let configuracao = carregarConfiguracao();
-
-// Função de log (silencioso)
-function log(mensagem, tipo = 'info') {
-  const timestamp = new Date().toISOString();
-  const tipoStr = tipo.toUpperCase().padEnd(5);
-  const logMessage = `[${timestamp}] [${tipoStr}] ${mensagem}\n`;
-  
-  try {
-    if (fs.existsSync(path.dirname(LOGS_FILE))) {
-      fs.appendFileSync(LOGS_FILE, logMessage);
-    }
-  } catch (err) {
-    // Silencioso
-  }
-}
-
-// Sanitização de string
 function sanitizarString(str) {
   if (!str || typeof str !== 'string') return '';
   return str.trim().replace(/[<>'"`]/g, '');
 }
 
-// Validar formato de data/hora
 function validarDataHora(dataHora) {
   if (!dataHora || typeof dataHora !== 'string') return false;
   const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
@@ -80,33 +35,26 @@ function validarDataHora(dataHora) {
   return !isNaN(date.getTime());
 }
 
-// Validar nota
 function validarNota(nota) {
   if (!nota) return false;
   const notaNum = parseFloat(nota);
   return !isNaN(notaNum) && notaNum >= 0 && notaNum <= 100;
 }
 
-// Validar CSV
 function validarEstruturaCSV(headers) {
   const requiredHeaders = ['nome', 'nota', 'datahora'];
   const headerLower = headers.map(h => h.trim().toLowerCase());
-  
   for (const required of requiredHeaders) {
     if (!headerLower.includes(required)) {
       return { valid: false, error: `Coluna obrigatória ausente: ${required}` };
     }
   }
-  
   return { valid: true };
 }
 
-// Configurar multer para upload de arquivos
 const upload = multer({ 
-  dest: path.join(__dirname, '../uploads/'),
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (ext !== '.csv') {
@@ -117,28 +65,6 @@ const upload = multer({
   }
 });
 
-function tratarErro(erro, res, mensagem) {
-  log(`${mensagem}: ${erro.message}`, 'error');
-  return res.status(500).json({ 
-    error: mensagem,
-    details: erro.message 
-  });
-}
-
-app.use('/api', express.json());
-
-// Função para calcular a janela de tempo em minutos
-function calcularJanelaMinutos(horarioInicio, horarioLimite) {
-  const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
-  const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
-  
-  const inicioMinutos = horaInicio * 60 + minutoInicio;
-  const limiteMinutos = horaLimite * 60 + minutoLimite;
-  
-  return limiteMinutos - inicioMinutos;
-}
-
-// Função para calcular a nota final com penalidades
 function calcularNotaFinal(nota, dataHora) {
   const notaOriginal = parseFloat(nota);
   
@@ -212,7 +138,8 @@ function calcularNotaFinal(nota, dataHora) {
   };
 }
 
-// Rota para processar upload do CSV
+app.use(express.json());
+
 app.post('/api/upload', upload.single('csvFile'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
@@ -223,13 +150,22 @@ app.post('/api/upload', upload.single('csvFile'), (req, res) => {
   let linhasInvalidas = 0;
   let headers = [];
   
-  fs.createReadStream(req.file.path)
+  const stream = fs.createReadStream = () => {
+    const { Readable } = require('stream');
+    return Readable.from([req.file.buffer]);
+  };
+  
+  const Readable = require('stream').Readable;
+  const bufferStream = new Readable();
+  bufferStream.push(req.file.buffer);
+  bufferStream.push(null);
+  
+  bufferStream
     .pipe(csv())
     .on('headers', (headerList) => {
       headers = headerList;
       const validacao = validarEstruturaCSV(headers);
       if (!validacao.valid) {
-        log(validacao.error, 'error');
         linhasInvalidas++;
       }
     })
@@ -239,17 +175,7 @@ app.post('/api/upload', upload.single('csvFile'), (req, res) => {
       const notaStr = sanitizarString(row.nota);
       const dataHora = sanitizarString(row.datahora);
       
-      if (!nome) {
-        linhasInvalidas++;
-        return;
-      }
-      
-      if (!validarNota(notaStr)) {
-        linhasInvalidas++;
-        return;
-      }
-      
-      if (!validarDataHora(dataHora)) {
+      if (!nome || !validarNota(notaStr) || !validarDataHora(dataHora)) {
         linhasInvalidas++;
         return;
       }
@@ -268,14 +194,6 @@ app.post('/api/upload', upload.single('csvFile'), (req, res) => {
       });
     })
     .on('end', () => {
-      log(`Processamento concluído. ${resultados.length} alunos processados. ${linhasInvalidas} linhas inválidas.`);
-      
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (error) {
-        log(`Erro ao remover arquivo temporário: ${error.message}`, 'warn');
-      }
-      
       if (resultados.length === 0) {
         return res.status(400).json({ error: 'Nenhum aluno válido encontrado no arquivo' });
       }
@@ -290,21 +208,18 @@ app.post('/api/upload', upload.single('csvFile'), (req, res) => {
       });
     })
     .on('error', (error) => {
-      log(`Erro ao processar CSV: ${error.message}`, 'error');
-      tratarErro(error, res, 'Erro ao processar o arquivo CSV');
+      res.status(500).json({ error: 'Erro ao processar o arquivo CSV', details: error.message });
     });
 });
 
-// Rota para obter configurações atuais
 app.get('/api/configuracao', (req, res) => {
   try {
     res.json(configuracao);
   } catch (error) {
-    tratarErro(error, res, 'Erro ao obter configuração');
+    res.status(500).json({ error: 'Erro ao obter configuração' });
   }
 });
 
-// Rota para atualizar configurações
 app.post('/api/configuracao', (req, res) => {
   try {
     const { horarioInicio, horarioLimite, percentualMaximo } = req.body;
@@ -337,17 +252,14 @@ app.post('/api/configuracao', (req, res) => {
     configuracao.percentualMaximo = percentual;
     configuracao.janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
     
-    salvarConfiguracao(configuracao);
-    
     res.json({ 
       success: true, 
       message: 'Configuração atualizada com sucesso',
       configuracao: configuracao 
     });
   } catch (error) {
-    tratarErro(error, res, 'Erro ao atualizar configuração');
+    res.status(500).json({ error: 'Erro ao atualizar configuração' });
   }
 });
 
 module.exports = app;
-
