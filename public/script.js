@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Simular progresso
         simularProgresso();
 
-        fetch('/upload', {
+        fetch('/api/upload', {
             method: 'POST',
             body: formData
         })
