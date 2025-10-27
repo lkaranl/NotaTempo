@@ -13,6 +13,13 @@
             <p>Sistema de Processamento de Notas com Penalidades por Atraso</p>
         </header>
 
+        <!-- Breadcrumb -->
+        <nav class="breadcrumb">
+            <span class="breadcrumb-item active">Upload</span>
+            <span class="breadcrumb-separator">→</span>
+            <span class="breadcrumb-item">Resultados</span>
+        </nav>
+
         <main>
             <div class="upload-section">
                 <h2>Upload do Arquivo CSV</h2>
@@ -35,11 +42,65 @@
 
                 <div id="loading" class="loading hidden">
                     <div class="spinner"></div>
-                    <p>Processando arquivo...</p>
+                    <p id="loadingText">Processando arquivo...</p>
+                    <div class="processing-steps">
+                        <div class="step" id="step1">
+                            <span class="step-icon">📥</span>
+                            <span class="step-text">Carregando arquivo</span>
+                        </div>
+                        <div class="step" id="step2">
+                            <span class="step-icon">📊</span>
+                            <span class="step-text">Processando dados</span>
+                        </div>
+                        <div class="step" id="step3">
+                            <span class="step-icon">🧮</span>
+                            <span class="step-text">Calculando penalidades</span>
+                        </div>
+                        <div class="step" id="step4">
+                            <span class="step-icon">✅</span>
+                            <span class="step-text">Finalizando</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview do CSV -->
+                <div id="csvPreview" class="csv-preview hidden">
+                    <h3>📄 Preview do Arquivo</h3>
+                    <div class="preview-info">
+                        <div class="preview-row">
+                            <span class="preview-label">Arquivo:</span>
+                            <span id="previewFileName"></span>
+                        </div>
+                        <div class="preview-row">
+                            <span class="preview-label">Tamanho:</span>
+                            <span id="previewFileSize"></span>
+                        </div>
+                        <div class="preview-row">
+                            <span class="preview-label">Linhas:</span>
+                            <span id="previewLineCount"></span>
+                        </div>
+                    </div>
+                    <div class="preview-table-container">
+                        <table class="preview-table">
+                            <thead id="previewTableHead"></thead>
+                            <tbody id="previewTableBody"></tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div id="error" class="error hidden">
                     <p id="errorMessage"></p>
+                </div>
+
+                <!-- Progresso -->
+                <div id="uploadProgress" class="upload-progress hidden">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">
+                        <span id="progressPercentage">0%</span> - 
+                        <span id="progressStatus">Carregando...</span>
+                    </p>
                 </div>
             </div>
 

@@ -7,25 +7,131 @@ const path = require('path');
 const app = express();
 const PORT = 3001;
 
-// Parâmetros de configuração (valores padrão)
-let configuracao = {
-  horarioInicio: '19:50',        // Horário que começa a penalidade
-  horarioLimite: '22:30',        // Horário limite final
-  percentualMaximo: 40,          // Percentual máximo de desconto
-  janelaMinutos: 160             // Janela de tempo em minutos (calculada automaticamente)
-};
+// Configuração
+const CONFIG_FILE = 'config.json';
+const LOGS_FILE = 'logs.txt';
+
+// Carregar configuração de arquivo JSON
+function carregarConfiguracao() {
+  try {
+    if (fs.existsSync(CONFIG_FILE)) {
+      const data = fs.readFileSync(CONFIG_FILE, 'utf8');
+      const config = JSON.parse(data);
+      config.janelaMinutos = calcularJanelaMinutos(config.horarioInicio, config.horarioLimite);
+      log('Configuração carregada do arquivo');
+      return config;
+    }
+  } catch (error) {
+    log('Erro ao carregar configuração: ' + error.message, 'error');
+  }
+  
+  // Valores padrão
+  return {
+    horarioInicio: '19:50',
+    horarioLimite: '22:30',
+    percentualMaximo: 40,
+    janelaMinutos: 160
+  };
+}
+
+// Salvar configuração em arquivo JSON
+function salvarConfiguracao(config) {
+  try {
+    const { horarioInicio, horarioLimite, percentualMaximo } = config;
+    const configParaSalvar = { horarioInicio, horarioLimite, percentualMaximo };
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(configParaSalvar, null, 2));
+    log('Configuração salva com sucesso');
+  } catch (error) {
+    log('Erro ao salvar configuração: ' + error.message, 'error');
+  }
+}
+
+let configuracao = carregarConfiguracao();
+
+// Função de log
+function log(mensagem, tipo = 'info') {
+  const timestamp = new Date().toISOString();
+  const tipoStr = tipo.toUpperCase().padEnd(5);
+  const logMessage = `[${timestamp}] [${tipoStr}] ${mensagem}\n`;
+  
+  // Salvar em arquivo
+  fs.appendFileSync(LOGS_FILE, logMessage, (err) => {
+    if (err) console.error('Erro ao escrever log:', err);
+  });
+  
+  // Exibir no console com cores
+  if (tipo === 'error') {
+    console.error(`\x1b[31m${logMessage}\x1b[0m`);
+  } else if (tipo === 'warn') {
+    console.warn(`\x1b[33m${logMessage}\x1b[0m`);
+  } else {
+    console.log(logMessage);
+  }
+}
+
+// Sanitização de string
+function sanitizarString(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.trim().replace(/[<>'"`]/g, '');
+}
+
+// Validar formato de data/hora
+function validarDataHora(dataHora) {
+  if (!dataHora || typeof dataHora !== 'string') return false;
+  
+  const regex = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+  if (!regex.test(dataHora)) return false;
+  
+  const date = new Date(dataHora);
+  return !isNaN(date.getTime());
+}
+
+// Validar nota
+function validarNota(nota) {
+  if (!nota) return false;
+  const notaNum = parseFloat(nota);
+  return !isNaN(notaNum) && notaNum >= 0 && notaNum <= 100;
+}
+
+// Validar CSV
+function validarEstruturaCSV(headers) {
+  const requiredHeaders = ['nome', 'nota', 'datahora'];
+  const headerLower = headers.map(h => h.trim().toLowerCase());
+  
+  for (const required of requiredHeaders) {
+    if (!headerLower.includes(required)) {
+      return { valid: false, error: `Coluna obrigatória ausente: ${required}` };
+    }
+  }
+  
+  return { valid: true };
+}
 
 // Configurar multer para upload de arquivos
 const upload = multer({ 
   dest: 'uploads/',
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || path.extname(file.originalname) === '.csv') {
-      cb(null, true);
-    } else {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.csv') {
+      log(`Tentativa de upload de arquivo inválido: ${file.originalname}`, 'warn');
       cb(new Error('Apenas arquivos CSV são permitidos'), false);
+      return;
     }
+    cb(null, true);
   }
 });
+
+// Middleware de tratamento de erros
+function tratarErro(erro, res, mensagem) {
+  log(`${mensagem}: ${erro.message}`, 'error');
+  return res.status(500).json({ 
+    error: mensagem,
+    details: erro.message 
+  });
+}
 
 // Middleware
 app.use(express.static('public'));
@@ -42,9 +148,22 @@ function calcularJanelaMinutos(horarioInicio, horarioLimite) {
   return limiteMinutos - inicioMinutos;
 }
 
-// Função para calcular a nota final com penalidades e informações detalhadas
+// Função para calcular a nota final com penalidades
 function calcularNotaFinal(nota, dataHora) {
   const notaOriginal = parseFloat(nota);
+  
+  if (!validarDataHora(dataHora)) {
+    log(`Data/hora inválida: ${dataHora}`, 'warn');
+    return {
+      notaFinal: 0,
+      notaOriginal: notaOriginal,
+      percentualDesconto: 0,
+      valorDesconto: 0,
+      minutosAtraso: 0,
+      status: 'Data inválida'
+    };
+  }
+  
   const dataEntrega = new Date(dataHora);
   
   // Usar configurações atuais
@@ -111,7 +230,7 @@ function calcularNotaFinal(nota, dataHora) {
   return {
     notaFinal: Math.round(notaFinal),
     notaOriginal: notaOriginal,
-    percentualDesconto: Math.round(percentualPenalidade * 10000) / 100, // Em %
+    percentualDesconto: Math.round(percentualPenalidade * 10000) / 100,
     valorDesconto: Math.round(valorDesconto * 100) / 100,
     minutosAtraso: minutosAtrasoLimitados,
     status: minutosAtraso > configuracao.janelaMinutos ? 'Atraso máximo' : 'Com atraso'
@@ -120,127 +239,219 @@ function calcularNotaFinal(nota, dataHora) {
 
 // Rota principal - página de upload
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  try {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao carregar página inicial');
+  }
 });
 
 // Rota para processar upload do CSV
 app.post('/upload', upload.single('csvFile'), (req, res) => {
+  log('Iniciando processamento de upload');
+  
   if (!req.file) {
+    log('Nenhum arquivo enviado', 'warn');
     return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
   }
 
-  console.log('Arquivo recebido:', req.file.originalname);
+  log(`Arquivo recebido: ${req.file.originalname}`);
+  
   const resultados = [];
   let linhaCount = 0;
+  let linhasInvalidas = 0;
+  let headersCapturados = false;
+  let headers = [];
   
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (row) => {
-      linhaCount++;
-      console.log(`Linha ${linhaCount}:`, row);
-      
-      const nome = row.nome;
-      const nota = row.nota;
-      const dataHora = row.datahora;
-      
-      if (nome && nota && dataHora) {
-        const calculo = calcularNotaFinal(nota, dataHora);
-        console.log(`${nome}: ${nota} -> ${calculo.notaFinal} (${calculo.percentualDesconto}% desconto, ${calculo.minutosAtraso}min atraso)`);
-        resultados.push({
-          nome: nome,
-          notaFinal: calculo.notaFinal,
-          notaOriginal: calculo.notaOriginal,
-          percentualDesconto: calculo.percentualDesconto,
-          valorDesconto: calculo.valorDesconto,
-          minutosAtraso: calculo.minutosAtraso,
-          status: calculo.status,
-          dataHora: dataHora
-        });
-      } else {
-        console.log('Linha ignorada - dados incompletos:', row);
+    .on('headers', (headerList) => {
+      headers = headerList;
+      headersCapturados = true;
+      const validacao = validarEstruturaCSV(headers);
+      if (!validacao.valid) {
+        log(validacao.error, 'error');
+        linhasInvalidas++;
       }
     })
+    .on('data', (row) => {
+      linhaCount++;
+      
+      // Sanitizar dados
+      const nome = sanitizarString(row.nome);
+      const notaStr = sanitizarString(row.nota);
+      const dataHora = sanitizarString(row.datahora);
+      
+      // Validar dados
+      if (!nome) {
+        log(`Linha ${linhaCount}: Nome vazio`, 'warn');
+        linhasInvalidas++;
+        return;
+      }
+      
+      if (!validarNota(notaStr)) {
+        log(`Linha ${linhaCount}: Nota inválida: ${notaStr}`, 'warn');
+        linhasInvalidas++;
+        return;
+      }
+      
+      if (!validarDataHora(dataHora)) {
+        log(`Linha ${linhaCount}: Data/hora inválida: ${dataHora}`, 'warn');
+        linhasInvalidas++;
+        return;
+      }
+      
+      const calculo = calcularNotaFinal(notaStr, dataHora);
+      log(`${nome}: ${notaStr} -> ${calculo.notaFinal} (${calculo.percentualDesconto}% desconto, ${calculo.minutosAtraso}min atraso)`);
+      
+      resultados.push({
+        nome: nome,
+        notaFinal: calculo.notaFinal,
+        notaOriginal: calculo.notaOriginal,
+        percentualDesconto: calculo.percentualDesconto,
+        valorDesconto: calculo.valorDesconto,
+        minutosAtraso: calculo.minutosAtraso,
+        status: calculo.status,
+        dataHora: dataHora
+      });
+    })
     .on('end', () => {
-      console.log(`Processamento concluído. ${resultados.length} alunos processados.`);
+      log(`Processamento concluído. ${resultados.length} alunos processados. ${linhasInvalidas} linhas inválidas.`);
       
       // Limpar arquivo temporário
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+        log('Arquivo temporário removido');
+      } catch (error) {
+        log(`Erro ao remover arquivo temporário: ${error.message}`, 'warn');
+      }
       
-      // Enviar resultados para a página de resultados
-      res.json({ resultados: resultados });
+      if (resultados.length === 0) {
+        log('Nenhum resultado válido encontrado', 'warn');
+        return res.status(400).json({ error: 'Nenhum aluno válido encontrado no arquivo' });
+      }
+      
+      // Enviar resultados
+      res.json({ 
+        resultados: resultados,
+        informacoes: {
+          totalLinhas: linhaCount,
+          linhasValidas: resultados.length,
+          linhasInvalidas: linhasInvalidas
+        }
+      });
     })
     .on('error', (error) => {
-      console.error('Erro ao processar CSV:', error);
-      res.status(500).json({ error: 'Erro ao processar o arquivo CSV: ' + error.message });
+      log(`Erro ao processar CSV: ${error.message}`, 'error');
+      tratarErro(error, res, 'Erro ao processar o arquivo CSV');
     });
 });
 
 // Rota para página de resultados
 app.get('/resultados', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'resultados.html'));
+  try {
+    res.sendFile(path.join(__dirname, 'public', 'resultados.html'));
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao carregar página de resultados');
+  }
 });
 
 // Rota para página de configurações
 app.get('/configuracoes', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'configuracoes.html'));
+  try {
+    res.sendFile(path.join(__dirname, 'public', 'configuracoes.html'));
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao carregar página de configurações');
+  }
 });
 
 // Rota para página de estatísticas
 app.get('/estatisticas', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'estatisticas.html'));
+  try {
+    res.sendFile(path.join(__dirname, 'public', 'estatisticas.html'));
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao carregar página de estatísticas');
+  }
 });
 
 // Rota para obter configurações atuais
 app.get('/api/configuracao', (req, res) => {
-  res.json(configuracao);
+  try {
+    res.json(configuracao);
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao obter configuração');
+  }
 });
 
 // Rota para atualizar configurações
 app.post('/api/configuracao', (req, res) => {
-  const { horarioInicio, horarioLimite, percentualMaximo } = req.body;
-  
-  // Validar dados
-  if (!horarioInicio || !horarioLimite || !percentualMaximo) {
-    return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+  try {
+    const { horarioInicio, horarioLimite, percentualMaximo } = req.body;
+    
+    // Validar dados
+    if (!horarioInicio || !horarioLimite || percentualMaximo === undefined) {
+      return res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+    }
+    
+    // Validar formato de horário (HH:MM)
+    const horarioRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!horarioRegex.test(horarioInicio) || !horarioRegex.test(horarioLimite)) {
+      log(`Horários inválidos: ${horarioInicio}, ${horarioLimite}`, 'warn');
+      return res.status(400).json({ error: 'Formato de horário inválido. Use HH:MM' });
+    }
+    
+    // Validar percentual
+    const percentual = parseFloat(percentualMaximo);
+    if (isNaN(percentual) || percentual <= 0 || percentual >= 100) {
+      log(`Percentual inválido: ${percentualMaximo}`, 'warn');
+      return res.status(400).json({ error: 'Percentual deve ser um número entre 0 e 100 (excluindo os extremos)' });
+    }
+    
+    // Validar se horário limite é maior que horário início
+    const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
+    const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
+    const inicioMinutos = horaInicio * 60 + minutoInicio;
+    const limiteMinutos = horaLimite * 60 + minutoLimite;
+    
+    if (limiteMinutos <= inicioMinutos) {
+      log(`Horário limite menor que horário de início: ${horarioLimite} <= ${horarioInicio}`, 'warn');
+      return res.status(400).json({ error: 'Horário limite deve ser maior que horário de início' });
+    }
+    
+    // Atualizar configuração
+    configuracao.horarioInicio = horarioInicio;
+    configuracao.horarioLimite = horarioLimite;
+    configuracao.percentualMaximo = percentual;
+    configuracao.janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
+    
+    // Salvar em arquivo
+    salvarConfiguracao(configuracao);
+    log(`Configuração atualizada: ${JSON.stringify(configuracao)}`);
+    
+    res.json({ 
+      success: true, 
+      message: 'Configuração atualizada com sucesso',
+      configuracao: configuracao 
+    });
+  } catch (error) {
+    tratarErro(error, res, 'Erro ao atualizar configuração');
+  }
+});
+
+// Middleware de erro global
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      log('Arquivo muito grande enviado', 'warn');
+      return res.status(400).json({ error: 'Arquivo muito grande. Tamanho máximo: 5MB' });
+    }
   }
   
-  // Validar formato de horário (HH:MM)
-  const horarioRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-  if (!horarioRegex.test(horarioInicio) || !horarioRegex.test(horarioLimite)) {
-    return res.status(400).json({ error: 'Formato de horário inválido. Use HH:MM' });
-  }
-  
-  // Validar percentual
-  const percentual = parseFloat(percentualMaximo);
-  if (isNaN(percentual) || percentual <= 0 || percentual >= 100) {
-    return res.status(400).json({ error: 'Percentual deve ser um número entre 0% e 100% (excluindo os extremos)' });
-  }
-  
-  // Validar se horário limite é maior que horário início
-  const [horaInicio, minutoInicio] = horarioInicio.split(':').map(Number);
-  const [horaLimite, minutoLimite] = horarioLimite.split(':').map(Number);
-  const inicioMinutos = horaInicio * 60 + minutoInicio;
-  const limiteMinutos = horaLimite * 60 + minutoLimite;
-  
-  if (limiteMinutos <= inicioMinutos) {
-    return res.status(400).json({ error: 'Horário limite deve ser maior que horário de início' });
-  }
-  
-  // Atualizar configuração
-  configuracao.horarioInicio = horarioInicio;
-  configuracao.horarioLimite = horarioLimite;
-  configuracao.percentualMaximo = percentual;
-  configuracao.janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
-  
-  console.log('Configuração atualizada:', configuracao);
-  
-  res.json({ 
-    success: true, 
-    message: 'Configuração atualizada com sucesso',
-    configuracao: configuracao 
-  });
+  log(`Erro não tratado: ${err.message}`, 'error');
+  res.status(500).json({ error: 'Erro interno do servidor' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  log(`Servidor rodando em http://localhost:${PORT}`);
+  log(`Configuração atual: ${JSON.stringify(configuracao)}`);
 });
