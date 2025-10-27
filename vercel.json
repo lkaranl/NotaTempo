@@ -1,28 +1,17 @@
 {
-  "rewrites": [
+  "functions": {
+    "api/server.js": {
+      "maxDuration": 30
+    }
+  },
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/api/server.js"
+      "src": "/api/(.*)",
+      "dest": "/api/server.js"
     },
     {
-      "source": "/",
-      "destination": "/public/index.html"
-    },
-    {
-      "source": "/resultados",
-      "destination": "/public/resultados.html"
-    },
-    {
-      "source": "/configuracoes",
-      "destination": "/public/configuracoes.html"
-    },
-    {
-      "source": "/estatisticas",
-      "destination": "/public/estatisticas.html"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/public/$1"
+      "src": "/(.*)",
+      "dest": "/public/$1"
     }
   ]
 }
