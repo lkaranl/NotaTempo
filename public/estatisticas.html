@@ -35,11 +35,27 @@
                 </div>
 
                 <div id="noData" class="no-data hidden">
-                    <p>Nenhum dado encontrado. Faça o upload de um arquivo CSV válido.</p>
-                    <button onclick="window.location.href='/'" class="back-btn">
-                        <span class="btn-icon">←</span>
-                        Voltar ao Upload
-                    </button>
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <h3>Nenhum dado disponível</h3>
+                        <p>Você ainda não processou nenhum arquivo CSV com notas.</p>
+                        <p class="empty-subtitle">Faça o upload de um arquivo CSV para visualizar estatísticas detalhadas.</p>
+                        <div class="empty-actions">
+                            <button onclick="window.location.href='/'" class="back-btn">
+                                <span class="btn-icon">📤</span>
+                                Fazer Upload
+                            </button>
+                            <button onclick="window.location.href='/resultados'" class="back-btn">
+                                <span class="btn-icon">📄</span>
+                                Ver Resultados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="loadingStats" class="loading-stats hidden">
+                    <div class="spinner"></div>
+                    <p>Carregando estatísticas...</p>
                 </div>
             </div>
         </main>
@@ -50,17 +66,63 @@
             const dados = localStorage.getItem('resultadosNotas');
             
             if (!dados) {
-                document.getElementById('noData').classList.remove('hidden');
+                mostrarEstadoVazio();
                 return;
             }
 
             try {
                 const resultados = JSON.parse(dados);
-                calcularEstatisticas(resultados);
+                
+                if (!resultados || resultados.length === 0) {
+                    mostrarEstadoVazio();
+                    return;
+                }
+                
+                // Mostrar loading
+                mostrarLoading();
+                
+                // Calcular estatísticas com pequeno delay para animação
+                setTimeout(() => {
+                    calcularEstatisticas(resultados);
+                    esconderLoading();
+                }, 300);
             } catch (error) {
                 console.error('Erro ao carregar estatísticas:', error);
-                document.getElementById('noData').classList.remove('hidden');
+                mostrarErro('Erro ao processar os dados. Tente fazer upload novamente.');
             }
+        }
+        
+        function mostrarLoading() {
+            document.getElementById('loadingStats').classList.remove('hidden');
+            document.getElementById('statisticsContainer').innerHTML = '';
+            document.getElementById('noData').classList.add('hidden');
+        }
+        
+        function esconderLoading() {
+            document.getElementById('loadingStats').classList.add('hidden');
+        }
+        
+        function mostrarEstadoVazio() {
+            document.getElementById('noData').classList.remove('hidden');
+            document.getElementById('statisticsContainer').innerHTML = '';
+            document.getElementById('loadingStats').classList.add('hidden');
+        }
+        
+        function mostrarErro(mensagem) {
+            const container = document.getElementById('statisticsContainer');
+            container.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Erro ao carregar estatísticas</h3>
+                    <p>${mensagem}</p>
+                    <button onclick="window.location.href='/'" class="back-btn">
+                        <span class="btn-icon">←</span>
+                        Voltar ao Upload
+                    </button>
+                </div>
+            `;
+            document.getElementById('loadingStats').classList.add('hidden');
+            document.getElementById('noData').classList.add('hidden');
         }
 
         function calcularEstatisticas(resultados) {

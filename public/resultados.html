@@ -131,32 +131,70 @@
             // Ordenar por tempo de entrega (primeiro a entregar no topo)
             resultados.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
             
-            // Adicionar linhas da tabela
-            resultados.forEach((aluno) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <div class="student-name">
-                            <strong>${aluno.nome}</strong>
-                            <div class="status-badge ${getStatusClass(aluno.status)}">${aluno.status}</div>
-                            <div class="delivery-time">${formatarDataHora(aluno.dataHora)}</div>
+            // Agrupar por status
+            const gruposPorStatus = {
+                'No prazo': [],
+                'Com atraso': [],
+                'Atraso máximo': [],
+                'Nota mínima': [],
+                'Não entregou': [],
+                'Data inválida': []
+            };
+            
+            resultados.forEach(aluno => {
+                if (gruposPorStatus[aluno.status]) {
+                    gruposPorStatus[aluno.status].push(aluno);
+                } else {
+                    gruposPorStatus['Com atraso'].push(aluno);
+                }
+            });
+            
+            // Adicionar linhas da tabela agrupadas
+            Object.keys(gruposPorStatus).forEach(status => {
+                const grupo = gruposPorStatus[status];
+                if (grupo.length === 0) return;
+                
+                // Separador de grupo
+                const separatorRow = document.createElement('tr');
+                separatorRow.className = 'group-separator';
+                separatorRow.innerHTML = `
+                    <td colspan="4">
+                        <div class="separator-content">
+                            <span class="separator-icon">${getSeparatorIcon(status)}</span>
+                            <span class="separator-text">${status}</span>
+                            <span class="separator-count">${grupo.length} aluno(s)</span>
                         </div>
                     </td>
-                    <td class="nota-original">${aluno.notaOriginal}</td>
-                    <td class="nota-cell ${getNotaClass(aluno.notaFinal)}">${aluno.notaFinal}</td>
-                    <td class="penalty-details">
-                        ${aluno.percentualDesconto > 0 ? `
-                            <div class="penalty-info">
-                                <div class="penalty-percentage">-${aluno.percentualDesconto}%</div>
-                                <div class="penalty-value">-${aluno.valorDesconto} pontos</div>
-                                <div class="penalty-time">${aluno.minutosAtraso} min atraso</div>
-                            </div>
-                        ` : `
-                            <div class="no-penalty">Sem penalidade</div>
-                        `}
-                    </td>
                 `;
-                tbody.appendChild(row);
+                tbody.appendChild(separatorRow);
+                
+                // Linhas do grupo
+                grupo.forEach((aluno) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <div class="student-name">
+                                <strong>${aluno.nome}</strong>
+                                <div class="status-badge ${getStatusClass(aluno.status)}">${aluno.status}</div>
+                                <div class="delivery-time">${formatarDataHora(aluno.dataHora)}</div>
+                            </div>
+                        </td>
+                        <td class="nota-original">${aluno.notaOriginal}</td>
+                        <td class="nota-cell ${getNotaClass(aluno.notaFinal)}">${aluno.notaFinal}</td>
+                        <td class="penalty-details">
+                            ${aluno.percentualDesconto > 0 ? `
+                                <div class="penalty-info">
+                                    <div class="penalty-percentage">-${aluno.percentualDesconto}%</div>
+                                    <div class="penalty-value">-${aluno.valorDesconto} pontos</div>
+                                    <div class="penalty-time">${aluno.minutosAtraso} min atraso</div>
+                                </div>
+                            ` : `
+                                <div class="no-penalty">Sem penalidade</div>
+                            `}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
             });
         }
 
@@ -175,6 +213,17 @@
                 case 'Não entregou': return 'status-not-submitted';
                 case 'Nota mínima': return 'status-min-grade';
                 default: return 'status-unknown';
+            }
+        }
+        
+        function getSeparatorIcon(status) {
+            switch(status) {
+                case 'No prazo': return '✅';
+                case 'Com atraso': return '⏰';
+                case 'Atraso máximo': return '⚠️';
+                case 'Não entregou': return '❌';
+                case 'Nota mínima': return '📝';
+                default: return '📋';
             }
         }
 
