@@ -32,6 +32,10 @@
                                 <span class="btn-icon">←</span>
                                 Novo Upload
                             </button>
+                            <button onclick="limparDados()" class="back-btn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                                <span class="btn-icon">🗑️</span>
+                                Limpar Dados
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -287,6 +291,14 @@
             } catch (error) {
                 console.error('Erro ao gerar relatório:', error);
                 alert('Erro ao gerar relatório. Tente novamente.');
+            }
+        }
+
+        function limparDados() {
+            if (confirm('Tem certeza que deseja limpar todos os dados armazenados?')) {
+                localStorage.removeItem('resultadosNotas');
+                alert('Dados limpos com sucesso!');
+                window.location.href = '/index.html';
             }
         }
 
