@@ -1364,10 +1364,159 @@ tbody tr:hover td:first-child {
     .preview-info {
         grid-template-columns: 1fr;
     }
+    
+    .ranking-item {
+        grid-template-columns: 40px 1fr 60px;
+    }
+    
+    .rank-atraso {
+        display: none;
+    }
 }
 
 @media (max-width: 480px) {
     .processing-steps {
         grid-template-columns: 1fr;
     }
+    
+    .ranking-item {
+        grid-template-columns: 30px 1fr 50px;
+        padding: 10px 15px;
+        gap: 10px;
+    }
+    
+    .rank-position {
+        font-size: 0.9rem;
+    }
+    
+    .rank-nota {
+        font-size: 1.1rem;
+    }
+    
+    .anomalo-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+}
+
+/* Rankings */
+.rankings-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ranking-item {
+    display: grid;
+    grid-template-columns: 50px 1fr 80px auto;
+    gap: 15px;
+    align-items: center;
+    padding: 15px 20px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.ranking-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.rank-good {
+    background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
+    border-left: 4px solid #48bb78;
+}
+
+.rank-bad {
+    background: linear-gradient(135deg, #fed7d7 0%, #fc8181 100%);
+    border-left: 4px solid #f56565;
+}
+
+.rank-position {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: #2d3748;
+}
+
+.rank-name {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.rank-nota {
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: #2d3748;
+    text-align: right;
+}
+
+.rank-atraso {
+    font-size: 0.85rem;
+    color: #718096;
+    background: rgba(255,255,255,0.6);
+    padding: 3px 10px;
+    border-radius: 15px;
+}
+
+/* Casos Anômalos */
+.anomalos-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.anomalo-card {
+    background: #fffaf0;
+    border-left: 4px solid #ed8936;
+    padding: 15px 20px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.anomalo-card:hover {
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.2);
+    transform: translateX(3px);
+}
+
+.anomalo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.anomalo-header strong {
+    color: #2d3748;
+    font-size: 1.05rem;
+}
+
+.anomalo-nota {
+    background: #fee;
+    color: #c53030;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.anomalo-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.anomalo-tag {
+    background: #fef5e7;
+    color: #744210;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.anomalo-more {
+    text-align: center;
+    color: #718096;
+    font-style: italic;
+    margin-top: 10px;
 }

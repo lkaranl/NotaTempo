@@ -69,19 +69,27 @@
             
             // Estatísticas básicas
             const totalAlunos = resultados.length;
+            
+            // Filtrar apenas quem entregou (nota > 0) para cálculos relevantes
+            const notasComDados = notas.filter(nota => nota > 0);
+            
             const aprovados = notas.filter(nota => nota >= 60).length;
             const reprovados = notas.filter(nota => nota < 60 && nota > 0).length;
             const naoEntregaram = notas.filter(nota => nota === 0).length;
             
+            // Média geral - inclui todos (mesmo os que não entregaram, conta como 0)
             const mediaGeral = totalAlunos > 0 ? notas.reduce((sum, nota) => sum + nota, 0) / totalAlunos : 0;
-            const mediaOriginais = notasOriginais.reduce((sum, nota) => sum + nota, 0) / notasOriginais.length;
-            const maiorNota = Math.max(...notas);
-            const menorNota = Math.min(...notas.filter(nota => nota > 0));
             
-            // Média apenas dos que entregaram (nota > 0)
-            const notasEntregaram = notas.filter(nota => nota > 0);
-            const mediaDosQueEntregaram = notasEntregaram.length > 0 
-                ? notasEntregaram.reduce((sum, nota) => sum + nota, 0) / notasEntregaram.length 
+            // Média das originais de todos
+            const mediaOriginais = notasOriginais.reduce((sum, nota) => sum + nota, 0) / notasOriginais.length;
+            
+            // Maior nota (já desconsidera 0 automaticamente)
+            const maiorNota = notasComDados.length > 0 ? Math.max(...notasComDados) : 0;
+            const menorNota = notasComDados.length > 0 ? Math.min(...notasComDados) : 0;
+            
+            // Média apenas dos que entregaram
+            const mediaDosQueEntregaram = notasComDados.length > 0 
+                ? notasComDados.reduce((sum, nota) => sum + nota, 0) / notasComDados.length 
                 : 0;
             
             // Estatísticas sobre penalidades
@@ -100,19 +108,166 @@
                 ? alunosComDesconto.reduce((sum, aluno) => sum + aluno.percentualDesconto, 0) / alunosComDesconto.length 
                 : 0;
             
-            // Distribuição de notas por faixa
+            // Distribuição de notas por faixa (apenas quem entregou)
             const distribuicaoNotas = {
-                '0-10': notas.filter(n => n > 0 && n <= 10).length,
-                '11-20': notas.filter(n => n > 10 && n <= 20).length,
-                '21-30': notas.filter(n => n > 20 && n <= 30).length,
-                '31-40': notas.filter(n => n > 30 && n <= 40).length,
-                '41-50': notas.filter(n => n > 40 && n <= 50).length,
-                '51-60': notas.filter(n => n > 50 && n < 60).length,
-                '60-70': notas.filter(n => n >= 60 && n < 70).length,
-                '70-80': notas.filter(n => n >= 70 && n < 80).length,
-                '80-90': notas.filter(n => n >= 80 && n < 90).length,
-                '90-100': notas.filter(n => n >= 90 && n <= 100).length
+                '0-10': notasComDados.filter(n => n > 0 && n <= 10).length,
+                '11-20': notasComDados.filter(n => n > 10 && n <= 20).length,
+                '21-30': notasComDados.filter(n => n > 20 && n <= 30).length,
+                '31-40': notasComDados.filter(n => n > 30 && n <= 40).length,
+                '41-50': notasComDados.filter(n => n > 40 && n <= 50).length,
+                '51-60': notasComDados.filter(n => n > 50 && n < 60).length,
+                '60-70': notasComDados.filter(n => n >= 60 && n < 70).length,
+                '70-80': notasComDados.filter(n => n >= 70 && n < 80).length,
+                '80-90': notasComDados.filter(n => n >= 80 && n < 90).length,
+                '90-100': notasComDados.filter(n => n >= 90 && n <= 100).length
             };
+            
+            // Top 10 melhores e piores
+            const alunosOrdenados = [...resultados].sort((a, b) => {
+                // Ordenar por nota (decrescente)
+                if (b.notaFinal !== a.notaFinal) {
+                    return b.notaFinal - a.notaFinal;
+                }
+                // Em caso de empate, ordenar por menor tempo de atraso
+                return a.minutosAtraso - b.minutosAtraso;
+            });
+            
+            const top10Melhores = alunosOrdenados.slice(0, 10);
+            
+            // Para piores, filtrar apenas quem entregou (nota > 0)
+            const alunosComNotas = alunosOrdenados.filter(a => a.notaFinal > 0);
+            const top10Piores = alunosComNotas.slice(-10).reverse();
+            
+            // Médias por faixa de atraso
+            const faixasAtraso = {
+                'No prazo': resultados.filter(a => a.minutosAtraso === 0),
+                '0-30 min': resultados.filter(a => a.minutosAtraso > 0 && a.minutosAtraso <= 30),
+                '31-60 min': resultados.filter(a => a.minutosAtraso > 30 && a.minutosAtraso <= 60),
+                '61-90 min': resultados.filter(a => a.minutosAtraso > 60 && a.minutosAtraso <= 90),
+                '91-120 min': resultados.filter(a => a.minutosAtraso > 90 && a.minutosAtraso <= 120),
+                '121+ min': resultados.filter(a => a.minutosAtraso > 120)
+            };
+            
+            const mediaPorFaixaAtraso = {};
+            Object.keys(faixasAtraso).forEach(faixa => {
+                const alunos = faixasAtraso[faixa].filter(a => a.notaFinal > 0);
+                if (alunos.length > 0) {
+                    mediaPorFaixaAtraso[faixa] = alunos.reduce((sum, a) => sum + a.notaFinal, 0) / alunos.length;
+                }
+            });
+            
+            // Distribuição por horário de entrega
+            const distribuicaoHorario = {
+                '18:00-19:00': 0,
+                '19:00-20:00': 0,
+                '20:00-21:00': 0,
+                '21:00-22:00': 0,
+                '22:00-23:00': 0,
+                '23:00+': 0
+            };
+            
+            resultados.forEach(aluno => {
+                const hora = new Date(aluno.dataHora).getHours();
+                if (hora >= 18 && hora < 19) distribuicaoHorario['18:00-19:00']++;
+                else if (hora >= 19 && hora < 20) distribuicaoHorario['19:00-20:00']++;
+                else if (hora >= 20 && hora < 21) distribuicaoHorario['20:00-21:00']++;
+                else if (hora >= 21 && hora < 22) distribuicaoHorario['21:00-22:00']++;
+                else if (hora >= 22 && hora < 23) distribuicaoHorario['22:00-23:00']++;
+                else distribuicaoHorario['23:00+']++;
+            });
+            
+            // Percentis (apenas quem entregou)
+            const notasOrdenadas = [...notasComDados].sort((a, b) => a - b);
+            function calcularPercentil(array, percentile) {
+                if (array.length === 0) return 0;
+                const index = (percentile / 100) * (array.length - 1);
+                const lower = Math.floor(index);
+                const upper = Math.ceil(index);
+                return array[lower] + (array[upper] - array[lower]) * (index - lower);
+            }
+            
+            const percentis = notasOrdenadas.length > 0 ? {
+                q1: calcularPercentil(notasOrdenadas, 25),
+                mediana: calcularPercentil(notasOrdenadas, 50),
+                q3: calcularPercentil(notasOrdenadas, 75),
+                q95: calcularPercentil(notasOrdenadas, 95)
+            } : null;
+            
+            // Taxa de aprovação por intervalo de tempo (apenas quem entregou)
+            const aprovacaoPorIntervalo = {};
+            Object.keys(faixasAtraso).forEach(faixa => {
+                const alunos = faixasAtraso[faixa].filter(a => a.notaFinal > 0);
+                const aprovados = alunos.filter(a => a.notaFinal >= 60).length;
+                if (alunos.length > 0) {
+                    aprovacaoPorIntervalo[faixa] = {
+                        total: alunos.length,
+                        aprovados: aprovados,
+                        taxa: (aprovados / alunos.length) * 100
+                    };
+                }
+            });
+            
+            // Casos anômalos (apenas quem entregou)
+            // Primeiro calcular estatísticas para determinar o que é realmente anômalo
+            const alunosComEntrega = resultados.filter(a => a.notaFinal > 0);
+            
+            // Calcular média e desvio padrão das notas
+            const notasEntrega = alunosComEntrega.map(a => a.notaFinal);
+            const mediaNotas = notasEntrega.reduce((sum, n) => sum + n, 0) / notasEntrega.length;
+            const desvioPadrao = Math.sqrt(
+                notasEntrega.reduce((sum, n) => sum + Math.pow(n - mediaNotas, 2), 0) / notasEntrega.length
+            );
+            
+            // Calcular média e desvio padrão dos atrasos
+            const atrasos = alunosComEntrega.map(a => a.minutosAtraso);
+            const mediaAtrasos = atrasos.reduce((sum, a) => sum + a, 0) / atrasos.length;
+            const desvioAtrasos = Math.sqrt(
+                atrasos.reduce((sum, a) => sum + Math.pow(a - mediaAtrasos, 2), 0) / atrasos.length
+            );
+            
+            // Calcular impactos médios da penalidade
+            const impactos = alunosComEntrega.map(a => a.notaOriginal - a.notaFinal);
+            const mediaImpacto = impactos.reduce((sum, i) => sum + i, 0) / impactos.length;
+            const desvioImpacto = Math.sqrt(
+                impactos.reduce((sum, i) => sum + Math.pow(i - mediaImpacto, 2), 0) / impactos.length
+            );
+            
+            const casosAnomalos = [];
+            alunosComEntrega.forEach(aluno => {
+                const anomalo = [];
+                
+                // Nota extremamente baixa comparada à média (3 desvios padrão)
+                if (aluno.notaFinal < mediaNotas - 3 * desvioPadrao) {
+                    anomalo.push(`Nota extremamente baixa (${aluno.notaFinal.toFixed(1)})`);
+                }
+                
+                // Nota extremamente alta (outlier superior)
+                if (aluno.notaFinal > mediaNotas + 3 * desvioPadrao) {
+                    anomalo.push(`Nota extremamente alta (${aluno.notaFinal.toFixed(1)})`);
+                }
+                
+                // Atraso muito acima do normal (muito acima da média + 2 desvios)
+                if (aluno.minutosAtraso > mediaAtrasos + 2 * desvioAtrasos && aluno.minutosAtraso > 60) {
+                    anomalo.push(`Atraso muito acima do normal (${aluno.minutosAtraso}min)`);
+                }
+                
+                // Impacto da penalidade muito acima do normal
+                const impacto = aluno.notaOriginal - aluno.notaFinal;
+                if (impacto > mediaImpacto + 2 * desvioImpacto && impacto > 20) {
+                    anomalo.push(`Impacto da penalidade muito alto (${impacto.toFixed(1)} pts)`);
+                }
+                
+                if (anomalo.length > 0) {
+                    casosAnomalos.push({
+                        nome: aluno.nome,
+                        anomalias: anomalo,
+                        notaFinal: aluno.notaFinal,
+                        minutosAtraso: aluno.minutosAtraso,
+                        notaOriginal: aluno.notaOriginal,
+                        impacto: impacto
+                    });
+                }
+            });
             
             exibirEstatisticas({
                 totalAlunos,
@@ -132,7 +287,14 @@
                 mediaDesconto,
                 distribuicaoNotas,
                 resultados,
-                totalEntregaram: notasEntregaram.length
+                totalEntregaram: notasComDados.length,
+                top10Melhores,
+                top10Piores,
+                mediaPorFaixaAtraso,
+                distribuicaoHorario,
+                percentis,
+                aprovacaoPorIntervalo,
+                casosAnomalos
             });
         }
 
@@ -246,6 +408,119 @@
                         </div>
                     </div>
                 </div>
+
+                ${stats.percentis ? `
+                <div class="stats-section">
+                    <h3>📊 Percentis e Quartis</h3>
+                    <div class="stats-grid-2">
+                        <div class="stat-card">
+                            <div class="stat-label-small">1º Quartil (Q1)</div>
+                            <div class="stat-number-medium">${stats.percentis.q1.toFixed(1)}</div>
+                            <div class="stat-subtext">25% dos alunos</div>
+                        </div>
+                        <div class="stat-card stat-highlight">
+                            <div class="stat-label-small">Mediana (Q2)</div>
+                            <div class="stat-number-medium">${stats.percentis.mediana.toFixed(1)}</div>
+                            <div class="stat-subtext">50% dos alunos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label-small">3º Quartil (Q3)</div>
+                            <div class="stat-number-medium">${stats.percentis.q3.toFixed(1)}</div>
+                            <div class="stat-subtext">75% dos alunos</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label-small">Percentil 95</div>
+                            <div class="stat-number-medium">${stats.percentis.q95.toFixed(1)}</div>
+                            <div class="stat-subtext">Top 5%</div>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${stats.top10Melhores ? `
+                <div class="stats-section">
+                    <h3>🏆 Top 10 Melhores Notas</h3>
+                    <div class="rankings-container">
+                        ${stats.top10Melhores.map((aluno, index) => {
+                            // Determinar posição considerando empates
+                            let posicao = index + 1;
+                            if (index > 0 && aluno.notaFinal === stats.top10Melhores[index - 1].notaFinal && 
+                                aluno.minutosAtraso === stats.top10Melhores[index - 1].minutosAtraso) {
+                                // Encontrar a primeira posição com a mesma nota e atraso
+                                for (let i = index - 1; i >= 0; i--) {
+                                    if (stats.top10Melhores[i].notaFinal === aluno.notaFinal &&
+                                        stats.top10Melhores[i].minutosAtraso === aluno.minutosAtraso) {
+                                        posicao = i + 1;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            return `
+                            <div class="ranking-item rank-good">
+                                <span class="rank-position">${posicao}º</span>
+                                <span class="rank-name">${aluno.nome}</span>
+                                <span class="rank-nota">${aluno.notaFinal}</span>
+                                ${aluno.minutosAtraso > 0 ? `<span class="rank-atraso">${aluno.minutosAtraso}min atraso</span>` : '<span class="rank-atraso">No prazo</span>'}
+                            </div>
+                        `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <h3>📉 Top 10 Piores Notas</h3>
+                    <div class="rankings-container">
+                        ${stats.top10Piores.map((aluno, index) => `
+                            <div class="ranking-item rank-bad">
+                                <span class="rank-position">${index + 1}º</span>
+                                <span class="rank-name">${aluno.nome}</span>
+                                <span class="rank-nota">${aluno.notaFinal}</span>
+                                ${aluno.minutosAtraso > 0 ? `<span class="rank-atraso">${aluno.minutosAtraso}min atraso</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${stats.mediaPorFaixaAtraso ? `
+                <div class="stats-section">
+                    <h3>📊 Média de Notas por Faixa de Atraso</h3>
+                    <div class="chart-container-large">
+                        <canvas id="atrasoChart"></canvas>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${stats.aprovacaoPorIntervalo ? `
+                <div class="stats-section">
+                    <h3>✅ Taxa de Aprovação por Intervalo de Tempo</h3>
+                    <div class="chart-container-large">
+                        <canvas id="aprovacaoChart"></canvas>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${stats.casosAnomalos && stats.casosAnomalos.length > 0 ? `
+                <div class="stats-section">
+                    <h3>⚠️ Casos Anômalos (${stats.casosAnomalos.length})</h3>
+                    <div class="anomalos-container">
+                        ${stats.casosAnomalos.slice(0, 10).map(caso => `
+                            <div class="anomalo-card">
+                                <div class="anomalo-header">
+                                    <strong>${caso.nome}</strong>
+                                    <span class="anomalo-nota">Nota: ${caso.notaFinal}</span>
+                                </div>
+                                <div class="anomalo-tags">
+                                    ${caso.anomalias.map(anomalia => `<span class="anomalo-tag">${anomalia}</span>`).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${stats.casosAnomalos.length > 10 ? `<p class="anomalo-more">... e mais ${stats.casosAnomalos.length - 10} casos</p>` : ''}
+                    </div>
+                </div>
+                ` : ''}
 
                 <div class="stats-section">
                     <h3>📉 Impacto das Penalidades</h3>
@@ -381,8 +656,8 @@
                 });
             }
 
-            // Gráfico de Linha - Impacto das Penalidades
-            const alunosComPenalidade = stats.resultados.filter(a => a.percentualDesconto > 0);
+            // Gráfico de Linha - Impacto das Penalidades (apenas quem entregou)
+            const alunosComPenalidade = stats.resultados.filter(a => a.percentualDesconto > 0 && a.notaFinal > 0);
             if (alunosComPenalidade.length > 0) {
                 const impactos = alunosComPenalidade.map(a => ({
                     nome: a.nome,
@@ -438,6 +713,119 @@
                             scales: {
                                 y: {
                                     beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Gráfico de Médias por Faixa de Atraso
+            if (stats.mediaPorFaixaAtraso) {
+                const ctxAtraso = document.getElementById('atrasoChart');
+                if (ctxAtraso) {
+                    const labels = Object.keys(stats.mediaPorFaixaAtraso);
+                    const medias = Object.values(stats.mediaPorFaixaAtraso);
+                    
+                    new Chart(ctxAtraso, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Média de Nota',
+                                data: medias,
+                                backgroundColor: labels.map((_, i) => 
+                                    i === 0 ? '#48bb78' : 
+                                    i <= 2 ? '#4299e1' : 
+                                    i <= 4 ? '#ed8936' : '#f56565'
+                                ),
+                                borderColor: '#2d3748',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Média de Notas por Faixa de Atraso',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Gráfico de Taxa de Aprovação por Intervalo
+            if (stats.aprovacaoPorIntervalo) {
+                const ctxAprov = document.getElementById('aprovacaoChart');
+                if (ctxAprov) {
+                    const labels = Object.keys(stats.aprovacaoPorIntervalo);
+                    const taxas = Object.values(stats.aprovacaoPorIntervalo).map(d => d.taxa);
+                    
+                    new Chart(ctxAprov, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Taxa de Aprovação (%)',
+                                data: taxas,
+                                backgroundColor: taxas.map(t => 
+                                    t >= 80 ? '#48bb78' : 
+                                    t >= 50 ? '#4299e1' : 
+                                    t >= 30 ? '#ed8936' : '#f56565'
+                                ),
+                                borderColor: '#2d3748',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Taxa de Aprovação por Faixa de Atraso',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const data = stats.aprovacaoPorIntervalo[context.label];
+                                            return `${context.parsed.y.toFixed(1)}% (${data.aprovados}/${data.total} aprovados)`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + '%';
+                                        }
+                                    }
                                 }
                             }
                         }
