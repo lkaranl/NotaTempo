@@ -1,12 +1,7 @@
-const express = require('express');
-const multer = require('multer');
+const { Readable } = require('stream');
 const csv = require('csv-parser');
-const fs = require('fs');
-const path = require('path');
 
-const app = express();
-
-// Configuração em memória (não persiste entre requests)
+// Configuração em memória
 let configuracao = {
   horarioInicio: '19:50',
   horarioLimite: '22:30',
@@ -51,19 +46,6 @@ function validarEstruturaCSV(headers) {
   }
   return { valid: true };
 }
-
-const upload = multer({ 
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.csv') {
-      cb(new Error('Apenas arquivos CSV são permitidos'), false);
-      return;
-    }
-    cb(null, true);
-  }
-});
 
 function calcularNotaFinal(nota, dataHora) {
   const notaOriginal = parseFloat(nota);
@@ -138,90 +120,81 @@ function calcularNotaFinal(nota, dataHora) {
   };
 }
 
-app.use(express.json());
-
-app.post('/api/upload', upload.single('csvFile'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
-  }
-  
-  const resultados = [];
-  let linhaCount = 0;
-  let linhasInvalidas = 0;
-  let headers = [];
-  
-  const stream = fs.createReadStream = () => {
-    const { Readable } = require('stream');
-    return Readable.from([req.file.buffer]);
-  };
-  
-  const Readable = require('stream').Readable;
-  const bufferStream = new Readable();
-  bufferStream.push(req.file.buffer);
-  bufferStream.push(null);
-  
-  bufferStream
-    .pipe(csv())
-    .on('headers', (headerList) => {
-      headers = headerList;
-      const validacao = validarEstruturaCSV(headers);
-      if (!validacao.valid) {
-        linhasInvalidas++;
-      }
-    })
-    .on('data', (row) => {
-      linhaCount++;
-      const nome = sanitizarString(row.nome);
-      const notaStr = sanitizarString(row.nota);
-      const dataHora = sanitizarString(row.datahora);
-      
-      if (!nome || !validarNota(notaStr) || !validarDataHora(dataHora)) {
-        linhasInvalidas++;
-        return;
-      }
-      
-      const calculo = calcularNotaFinal(notaStr, dataHora);
-      
-      resultados.push({
-        nome: nome,
-        notaFinal: calculo.notaFinal,
-        notaOriginal: calculo.notaOriginal,
-        percentualDesconto: calculo.percentualDesconto,
-        valorDesconto: calculo.valorDesconto,
-        minutosAtraso: calculo.minutosAtraso,
-        status: calculo.status,
-        dataHora: dataHora
-      });
-    })
-    .on('end', () => {
-      if (resultados.length === 0) {
-        return res.status(400).json({ error: 'Nenhum aluno válido encontrado no arquivo' });
-      }
-      
-      res.json({ 
-        resultados: resultados,
-        informacoes: {
-          totalLinhas: linhaCount,
-          linhasValidas: resultados.length,
-          linhasInvalidas: linhasInvalidas
+function processarCSV(buffer) {
+  return new Promise((resolve, reject) => {
+    const resultados = [];
+    let linhaCount = 0;
+    let linhasInvalidas = 0;
+    let headers = [];
+    
+    const bufferStream = Readable.from(buffer.toString('utf8'));
+    
+    bufferStream
+      .pipe(csv())
+      .on('headers', (headerList) => {
+        headers = headerList;
+        const validacao = validarEstruturaCSV(headers);
+        if (!validacao.valid) {
+          linhasInvalidas++;
         }
+      })
+      .on('data', (row) => {
+        linhaCount++;
+        const nome = sanitizarString(row.nome);
+        const notaStr = sanitizarString(row.nota);
+        const dataHora = sanitizarString(row.datahora);
+        
+        if (!nome || !validarNota(notaStr) || !validarDataHora(dataHora)) {
+          linhasInvalidas++;
+          return;
+        }
+        
+        const calculo = calcularNotaFinal(notaStr, dataHora);
+        
+        resultados.push({
+          nome: nome,
+          notaFinal: calculo.notaFinal,
+          notaOriginal: calculo.notaOriginal,
+          percentualDesconto: calculo.percentualDesconto,
+          valorDesconto: calculo.valorDesconto,
+          minutosAtraso: calculo.minutosAtraso,
+          status: calculo.status,
+          dataHora: dataHora
+        });
+      })
+      .on('end', () => {
+        resolve({
+          resultados,
+          informacoes: {
+            totalLinhas: linhaCount,
+            linhasValidas: resultados.length,
+            linhasInvalidas: linhasInvalidas
+          }
+        });
+      })
+      .on('error', (error) => {
+        reject(error);
       });
-    })
-    .on('error', (error) => {
-      res.status(500).json({ error: 'Erro ao processar o arquivo CSV', details: error.message });
-    });
-});
+  });
+}
 
-app.get('/api/configuracao', (req, res) => {
-  try {
-    res.json(configuracao);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao obter configuração' });
+module.exports = async (req, res) => {
+  // CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
   }
-});
-
-app.post('/api/configuracao', (req, res) => {
-  try {
+  
+  // Rota GET /api/configuracao
+  if (req.method === 'GET' && req.url === '/api/configuracao') {
+    return res.json(configuracao);
+  }
+  
+  // Rota POST /api/configuracao
+  if (req.method === 'POST' && req.url === '/api/configuracao') {
     const { horarioInicio, horarioLimite, percentualMaximo } = req.body;
     
     if (!horarioInicio || !horarioLimite || percentualMaximo === undefined) {
@@ -252,14 +225,55 @@ app.post('/api/configuracao', (req, res) => {
     configuracao.percentualMaximo = percentual;
     configuracao.janelaMinutos = calcularJanelaMinutos(horarioInicio, horarioLimite);
     
-    res.json({ 
+    return res.json({ 
       success: true, 
       message: 'Configuração atualizada com sucesso',
       configuracao: configuracao 
     });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao atualizar configuração' });
   }
-});
-
-module.exports = app;
+  
+  // Rota POST /api/upload
+  if (req.method === 'POST' && req.url === '/api/upload') {
+    try {
+      const multer = require('multer');
+      const uploadMemory = multer({ 
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 5 * 1024 * 1024 },
+        fileFilter: (req, file, cb) => {
+          const ext = require('path').extname(file.originalname).toLowerCase();
+          if (ext !== '.csv') {
+            cb(new Error('Apenas arquivos CSV são permitidos'), false);
+            return;
+          }
+          cb(null, true);
+        }
+      });
+      
+      uploadMemory.single('csvFile')(req, res, async (err) => {
+        if (err) {
+          return res.status(400).json({ error: err.message });
+        }
+        
+        if (!req.file) {
+          return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+        }
+        
+        try {
+          const resultado = await processarCSV(req.file.buffer);
+          
+          if (resultado.resultados.length === 0) {
+            return res.status(400).json({ error: 'Nenhum aluno válido encontrado no arquivo' });
+          }
+          
+          res.json(resultado);
+        } catch (error) {
+          res.status(500).json({ error: 'Erro ao processar CSV', details: error.message });
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Erro no servidor', details: error.message });
+    }
+  } else {
+    res.status(404).json({ error: 'Rota não encontrada' });
+  }
+};
