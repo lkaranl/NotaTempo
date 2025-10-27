@@ -1,4 +1,12 @@
 {
+  "buildCommand": "echo 'No build step required'",
+  "outputDirectory": "public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
