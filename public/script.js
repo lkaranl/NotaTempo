@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('resultadosNotas', JSON.stringify(data.resultados));
                 
                 // Redirecionar para página de resultados com animação
-                window.location.href = '/resultados';
+                window.location.href = '/resultados.html';
             }, 500);
         })
         .catch(error => {
