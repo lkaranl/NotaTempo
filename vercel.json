@@ -8,12 +8,32 @@
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "server.js"
+      "src": "/upload",
+      "dest": "/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "public/$1"
+      "src": "/api/(.*)",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/(.*\\.(html|css|js|ico|png|jpg|jpeg|gif|svg))",
+      "dest": "/public/$1"
+    },
+    {
+      "src": "/resultados",
+      "dest": "/public/resultados.html"
+    },
+    {
+      "src": "/configuracoes",
+      "dest": "/public/configuracoes.html"
+    },
+    {
+      "src": "/estatisticas",
+      "dest": "/public/estatisticas.html"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
     }
   ]
 }
